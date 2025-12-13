@@ -1,6 +1,12 @@
-GRID_SIZE: int = 10
-FPS: int = 10  # Speed of visualization
-EPISODES: int = 1000  # How many games to train
-LEARNING_RATE: float = 0.1  # Alpha
-DISCOUNT_FACTOR: float = 0.9  # Gamma
-EPSILON: float = 1.0  # Exploration rate
+# Game Settings
+GRID_SIZE = 20
+FPS = 20
+
+# RL Hyperparameters
+LEARNING_RATE = 0.1       # Alpha: Common starting point
+DISCOUNT_FACTOR = 0.9     # Gamma: We care significantly about future rewards
+EPSILON = 1.0             # Start by exploring 100% of the time
+EPSILON_DECAY = 0.995     # Reduce exploration slightly every game
+MIN_EPSILON = 0.01        # Always explore at least 1% of the time
+
+EPISODES = 1000           # How many games to train
