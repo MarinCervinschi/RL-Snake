@@ -1,0 +1,10 @@
+[project]
+name = "rl-snake"
+version = "0.1.0"
+description = "reinforcement learning snake game"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.3.5",
+    "pydantic>=2.12.5",
+]
