@@ -19,8 +19,6 @@ class QNetwork(nn.Module):
     Input (11) → Hidden (128) → Hidden (128) → Output (3)
     """
 
-    EPISODES: int = 3000
-
     def __init__(self, input_size=11, hidden_size=128, output_size=3):
         super().__init__()
         self.network = nn.Sequential(
@@ -60,6 +58,8 @@ class DQNAgent(IAgent):
     """
     Deep Q-Network Agent using Experience Replay and Target Network.
     """
+
+    EPISODES: int = 3000
 
     def __init__(
         self,
