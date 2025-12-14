@@ -22,13 +22,13 @@ uv run main.py
 uv run main.py --ui terminal
 
 # Customize agent type and show plots
-uv run main.py --agent q_learning --show-plots
+uv run main.py --agent_type q_learning --show-plots
 ```
 
 ### Command Line Options
 
 - `--ui [pygame|terminal]` - Choose UI renderer (default: pygame)
-- `--agent [q_learning]` - Choose agent type (default: q_learning)
+- `--agent_type [q_learning]` - Choose agent type (default: q_learning)
 - `--show-plots/--no-show-plots` - Show training metrics plots after training (default: no-show-plots)
 
 ### Rendering configuration

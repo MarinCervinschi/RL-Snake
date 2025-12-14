@@ -14,7 +14,7 @@ from utils.metrics import TrainingMetrics
     help="Choose the UI renderer (default: pygame)",
 )
 @click.option(
-    "--agent",
+    "--agent_type",
     type=click.Choice(["q_learning"], case_sensitive=False),
     default="q_learning",
     help="Choose the agent type (default: q_learning)",
@@ -79,7 +79,7 @@ def main(ui: str, agent_type: str, show_plots: bool):
         if show_plots:
             print("Displaying training metrics...")
             metrics.plot()
-        input("Press Enter to close graphs...")
+            input("Press Enter to close graphs...")
 
 
 if __name__ == "__main__":
