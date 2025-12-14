@@ -1,6 +1,5 @@
 # Game Settings
 GRID_SIZE = 20
-FPS = 20
 
 # RL Hyperparameters
 LEARNING_RATE = 0.1       # Alpha: Common starting point

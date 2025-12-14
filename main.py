@@ -1,8 +1,8 @@
-import time
 from game.engine import SnakeGameEngine
 from agents.q_learning_agent import QLearningAgent
 from ui.terminal_view import TerminalRenderer
 from config import EPISODES, GRID_SIZE
+from utils.metrics import TrainingMetrics
 
 
 def main():
@@ -10,20 +10,19 @@ def main():
     agent = QLearningAgent()
     view = TerminalRenderer(GRID_SIZE, GRID_SIZE, speed=0.1)
 
-    scores = []
-    total_score = 0
-    record = 0
+    metrics = TrainingMetrics(save_plot=True)
 
     print("Starting Training...")
-    time.sleep(1)
 
     for episode in range(1, EPISODES + 1):
 
         state_old = game.reset()
         done = False
+
+        steps_taken = 0
         score = 0
 
-        should_render = (episode % 50 == 0) or (episode == EPISODES)
+        should_render = episode % 100 == 0
 
         while not done:
             action = agent.get_action(state_old)
@@ -35,24 +34,17 @@ def main():
 
             state_old = state_new
 
+            steps_taken += 1
+
             if should_render:
-                stats = {"episode": episode, "high_score": record}
+                stats = {"episode": episode}
                 view.render(game.snake, game.food, score, stats)
 
-        # --- End of Episode Metrics ---
-        if score > record:
-            record = score
+        metrics.record_episode(episode, score, steps_taken)
 
-        total_score += score
-        mean_score = total_score / episode
-
-        if not should_render:
-            print(
-                f"Episode {episode} | Score: {score} | Record: {record} | Epsilon: {agent.epsilon:.2f}"
-            )
-
-    print("\n--- Training Finished ---")
-    print(f"Final High Score: {record}")
+    print("Training Finished. Final Plot...")
+    metrics.plot()
+    input("Press Enter to close graphs...")
 
 
 if __name__ == "__main__":

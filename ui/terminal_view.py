@@ -50,7 +50,7 @@ class TerminalRenderer(IRenderer):
         os.system(command)
 
         print(f"--- GENERATION: {record['episode']} ---")
-        print(f"SCORE: {score}  |  HIGH SCORE: {record['high_score']}")
+        print(f"SCORE: {score}")
         print("-" * (self.width * 3))
 
         for row in grid:
