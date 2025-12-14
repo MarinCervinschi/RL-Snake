@@ -22,13 +22,17 @@ uv run main.py
 uv run main.py --ui terminal
 
 # Customize agent type and show plots
-uv run main.py --agent_type q_learning --show-plots
+uv run main.py --agent_type dqn --show-plots
 ```
+
+### ⚠️ note on `dqn` agent:
+
+The first time you run the DQN agent, it trains for 3000 episodes and saves the model to `dqn_model.pth`. This operation take ~10 minutes. Suggest to update the `RENDER_INTERVAL` in `config.py` to a large number to avoid rendering during this initial training. Subsequent runs will load the saved model for evaluation. Then update `RENDER_INTERVAL` back to a smaller number for visual feedback.
 
 ### Command Line Options
 
 - `--ui [pygame|terminal]` - Choose UI renderer (default: pygame)
-- `--agent_type [q_learning]` - Choose agent type (default: q_learning)
+- `--agent_type [q_learning|dqn]` - Choose agent type (default: q_learning)
 - `--show-plots/--no-show-plots` - Show training metrics plots after training (default: no-show-plots)
 
 ### Rendering configuration
@@ -74,3 +78,47 @@ A neural network-based approach that approximates Q-values through function appr
 - 📈 Scalable: Handles millions of states
 
 **[→ Full Documentation: Deep Q-Network (DQN)](docs/deep_q_network.md)**
+
+## Comparison: Q-Learning vs DQN
+
+### Memory Comparison
+
+**Q-Learning:**
+
+```python
+q_table = np.zeros((2048, 3))
+# Memory: 2048 × 3 × 8 bytes (float64) = 49,152 bytes ≈ 48 KB
+```
+
+**DQN:**
+
+```python
+q_network = QNetwork()  # 18,435 parameters
+replay_buffer = ReplayBuffer(100_000)  # 100k experiences
+# Network: 18,435 × 4 bytes (float32) ≈ 74 KB
+# Buffer: 100,000 × ~50 bytes ≈ 5 MB
+# Total: ~5 MB
+```
+
+### Speed Comparison
+
+**Q-Learning:**
+
+- Update time: **0.0001 ms** (array lookup + arithmetic)
+- Training 1000 episodes: ~0.02 minutes (on CPU)
+
+**DQN:**
+
+- Update time: **1-2 ms** (forward pass + backward pass)
+- Training 3000 episodes: ~10 minutes (on CPU)
+
+### Performance Comparison
+
+After equivalent training:
+
+| Metric        | Q-Learning (1000 ep) | DQN (3000 ep)                   |
+| ------------- | -------------------- | ------------------------------- |
+| Average Score | TODO apples          | TODO apples                     |
+| Max Score     | TODO apples          | TODO apples                     |
+| Consistency   | Moderate variance    | Lower variance (when converged) |
+| Pathfinding   | Good                 | Excellent                       |
