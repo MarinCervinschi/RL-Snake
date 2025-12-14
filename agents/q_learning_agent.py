@@ -9,6 +9,9 @@ from game.entities import Action, State
 
 
 class QLearningAgent(IAgent):
+
+    EPISODES: int = 1000
+
     def __init__(self):
         # 11 boolean sensors -> 2^11 = 2048 states
         self.state_size = 2048

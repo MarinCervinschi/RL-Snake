@@ -1,8 +1,7 @@
-from agents.q_learning_agent import QLearningAgent
+from agents import DQNAgent, QLearningAgent
 from config import GRID_SIZE, RENDER_SPEED
 from core.interfaces import IAgent, IRenderer
-from ui.pygame_view import PyGameRenderer
-from ui.terminal_view import TerminalRenderer
+from ui import PyGameRenderer, TerminalRenderer
 
 
 class Factory:
@@ -25,5 +24,8 @@ class Factory:
         if agent_type == "q_learning":
             print("Using Q-Learning Agent.")
             return QLearningAgent()
+        elif agent_type == "dqn":
+            print("Using Deep Q-Network (DQN) Agent.")
+            return DQNAgent()
         else:
             raise ValueError(f"Unknown agent type: {agent_type}")

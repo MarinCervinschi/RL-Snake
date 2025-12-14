@@ -18,6 +18,8 @@ class IRenderer(ABC):
 
 
 class IAgent(ABC):
+    EPISODES: int
+
     @abstractmethod
     def get_action(self, state: State) -> Action:
         """Decides the next action based on the current state."""
