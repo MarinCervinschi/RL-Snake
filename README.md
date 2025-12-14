@@ -15,8 +15,33 @@ uv sync
 2. Run the training loop:
 
 ```bash
+# Default: PyGame UI and Q-Learning agent
 uv run main.py
+
+# Or use terminal UI
+uv run main.py --ui terminal
+
+# Customize agent type and show plots
+uv run main.py --agent q_learning --show-plots
 ```
+
+### Command Line Options
+
+- `--ui [pygame|terminal]` - Choose UI renderer (default: pygame)
+- `--agent [q_learning]` - Choose agent type (default: q_learning)
+- `--show-plots/--no-show-plots` - Show training metrics plots after training (default: no-show-plots)
+
+### Rendering configuration
+
+Settings for rendering can be adjusted in [config.py](config.py):
+
+- Modify `RENDER_SPEED` to adjust the speed of rendering when using PyGame UI. (default: 0.1 seconds per frame)
+- Modify `RENDER_INTERVAL` to adjust how often the game is visually rendered during training. (default: every 100 episodes)
+
+### UI Options
+
+- **PyGame UI (Default):** Modern graphical interface with grid visualization
+- **Terminal UI:** Text-based visualization in console
 
 Initially, the snake will move randomly. Over time, it will learn to navigate the grid, avoid collisions, and seek out food.
 
@@ -138,9 +163,9 @@ This mathematical "scent" draws the snake toward the apple.
 - **Interpretation:** This separates "Intelligence" from "Luck." If the score is high but this metric stays high, the snake is just wandering randomly until it hits food. If this metric drops, the agent is actively optimizing its path (learning navigation).
 
 ### Sample Training Metrics (After 1000 Episodes)
+
 [![Training Metrics](docs/training_metrics_episode_1000.png)](docs/training_metrics_episode_1000.png)
 
 ## Future Roadmap
 
 - **Deep Q-Learning (DQN):** Replace the tabular `q_learning_agent.py` with a PyTorch Neural Network to handle larger grids.
-- **Graphical UI:** Implement a `PyGame` renderer in the `ui/` folder.
