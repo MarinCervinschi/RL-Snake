@@ -5,7 +5,9 @@ description = "reinforcement learning snake game"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "click>=8.3.1",
     "matplotlib>=3.10.8",
     "numpy>=2.3.5",
     "pydantic>=2.12.5",
+    "pygame>=2.6.1",
 ]
