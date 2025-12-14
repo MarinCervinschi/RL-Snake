@@ -35,7 +35,7 @@ class QLearningAgent:
 
     def train(
         self, state: State, action: Action, reward: float, next_state: State, done: bool
-    ):
+    ) -> None:
         """
         Updates Q-Table.
         """
