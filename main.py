@@ -1,8 +1,9 @@
 import click
-from game.engine import SnakeGameEngine
+
 from config import EPISODES, RENDER_INTERVAL
-from utils.metrics import TrainingMetrics
 from core.factory import Factory
+from game.engine import SnakeGameEngine
+from utils.metrics import TrainingMetrics
 
 
 @click.command()

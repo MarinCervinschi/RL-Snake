@@ -1,6 +1,9 @@
-import numpy as np
 import random
-from config import LEARNING_RATE, DISCOUNT_FACTOR, EPSILON, EPSILON_DECAY, MIN_EPSILON
+
+import numpy as np
+
+from config import (DISCOUNT_FACTOR, EPSILON, EPSILON_DECAY, LEARNING_RATE,
+                    MIN_EPSILON)
 from core.interfaces import IAgent
 from game.entities import Action, State
 

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from game.entities import State, Action, Point
 from typing import Optional
+
+from game.entities import Action, Point, State
 
 
 class IRenderer(ABC):

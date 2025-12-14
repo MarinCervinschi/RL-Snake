@@ -1,8 +1,8 @@
-from ui.pygame_view import PyGameRenderer
-from ui.terminal_view import TerminalRenderer
 from agents.q_learning_agent import QLearningAgent
 from config import GRID_SIZE, RENDER_SPEED
 from core.interfaces import IAgent, IRenderer
+from ui.pygame_view import PyGameRenderer
+from ui.terminal_view import TerminalRenderer
 
 
 class Factory:

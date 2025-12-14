@@ -1,9 +1,10 @@
 import os
-import time
 import platform
+import time
+from typing import Optional
+
 from core.interfaces import IRenderer
 from game.entities import Point
-from typing import Optional
 
 
 class TerminalRenderer(IRenderer):

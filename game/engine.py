@@ -1,7 +1,9 @@
 import random
-from .entities import Direction, Point, Action, State
-from config import GRID_SIZE
 from typing import Optional
+
+from config import GRID_SIZE
+
+from .entities import Action, Direction, Point, State
 
 
 class SnakeGameEngine:
