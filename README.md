@@ -67,8 +67,8 @@ The State Vector is a list of 11 `0`s and `1`s:
 10. **Food Up**: Is the apple coordinate < head coordinate?
 11. **Food Down**: Is the apple coordinate > head coordinate?
 
-**Example:**.  
-If the snake is moving **Up**, there is a **Wall on the Left**, and the **Apple is above**, the vector looks like:
+**Example:**.
+If the snake is moving **Up**, there is a **Wall on the Left**, and the **Apple is above**, the vector looks like:  
 `[0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0]`
 
 ## 4. Hyperparameters
@@ -123,8 +123,24 @@ This mathematical "scent" draws the snake toward the apple.
 1. **The Cowardly Agent:** If we set the death penalty too high (e.g., `-10,000`), the agent might simply freeze or spin in a safe circle forever, afraid to explore.
 2. **The Looping Agent:** If we gave `+1` just for staying alive, the agent would learn to ignore the food and just move in circles to farm "survival points" indefinitely. By making the food reward dominant (+10), we force goal-oriented behavior.
 
+## Performance Metrics
+
+**1. Learning Curve (Total Score)**
+
+- **What it measures:** The number of apples eaten per episode.
+- **Success Indicator:** The trend line should go **UP**.
+- **Interpretation:** Early episodes start near 0 (random movement). As the Q-Table fills, the agent survives longer and accumulates higher rewards.
+
+**2. Pathfinding Efficiency (Steps per Apple)**
+
+- **What it measures:** The average number of moves required to secure one point of reward.
+- **Success Indicator:** The trend line should go **DOWN**.
+- **Interpretation:** This separates "Intelligence" from "Luck." If the score is high but this metric stays high, the snake is just wandering randomly until it hits food. If this metric drops, the agent is actively optimizing its path (learning navigation).
+
+### Sample Training Metrics (After 1000 Episodes)
+[![Training Metrics](docs/training_metrics_episode_1000.png)](docs/training_metrics_episode_1000.png)
+
 ## Future Roadmap
 
 - **Deep Q-Learning (DQN):** Replace the tabular `q_learning_agent.py` with a PyTorch Neural Network to handle larger grids.
 - **Graphical UI:** Implement a `PyGame` renderer in the `ui/` folder.
-- **Pathfinding Metrics:** Add graphs to track "Average Steps per Apple" to measure efficiency.
