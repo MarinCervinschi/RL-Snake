@@ -1,6 +1,8 @@
 import click
+from tqdm import tqdm
 
-from config import EPISODES, RENDER_INTERVAL
+from agents import DQNAgent
+from config import RENDER_INTERVAL
 from core.factory import Factory
 from game.engine import SnakeGameEngine
 from utils.metrics import TrainingMetrics
@@ -15,7 +17,7 @@ from utils.metrics import TrainingMetrics
 )
 @click.option(
     "--agent_type",
-    type=click.Choice(["q_learning"], case_sensitive=False),
+    type=click.Choice(["q_learning", "dqn"], case_sensitive=False),
     default="q_learning",
     help="Choose the agent type (default: q_learning)",
 )
@@ -25,7 +27,7 @@ from utils.metrics import TrainingMetrics
     help="Whether to show training metric plots (default: no-show-plots)",
 )
 def main(ui: str, agent_type: str, show_plots: bool):
-    """Train a Q-Learning agent to play Snake using Reinforcement Learning."""
+    """Train agents to play Snake using Reinforcement Learning."""
 
     game = SnakeGameEngine()
     agent = Factory.create_agent(agent_type)
@@ -34,11 +36,13 @@ def main(ui: str, agent_type: str, show_plots: bool):
     metrics = TrainingMetrics()
     record_score = 0
 
+    EPISODES = agent.EPISODES
+
     print(f"Starting Training for {EPISODES} episodes...")
     print("Press Ctrl+C to stop early\n")
 
     try:
-        for episode in range(1, EPISODES + 1):
+        for episode in tqdm(range(1, EPISODES + 1)):
             state_old = game.reset()
             done = False
 
@@ -74,6 +78,13 @@ def main(ui: str, agent_type: str, show_plots: bool):
     finally:
         if ui == "pygame":
             view.close()
+
+        if agent_type == "dqn":
+            assert isinstance(agent, DQNAgent)
+
+            final_path = "models/dqn_model.pth"
+            agent.save(final_path)
+            print(f"💾 Final model saved: {final_path}")
 
         print("\n✅ Training Finished.")
         if show_plots:
