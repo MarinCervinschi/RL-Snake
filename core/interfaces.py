@@ -11,6 +11,10 @@ class IRenderer(ABC):
         """Renders the current game state."""
         pass
 
+    def close(self) -> None:
+        """Cleans up any resources used by the renderer."""
+        pass
+
 
 class IAgent(ABC):
     @abstractmethod

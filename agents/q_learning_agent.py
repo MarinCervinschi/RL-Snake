@@ -1,10 +1,11 @@
 import numpy as np
 import random
 from config import LEARNING_RATE, DISCOUNT_FACTOR, EPSILON, EPSILON_DECAY, MIN_EPSILON
+from core.interfaces import IAgent
 from game.entities import Action, State
 
 
-class QLearningAgent:
+class QLearningAgent(IAgent):
     def __init__(self):
         # 11 boolean sensors -> 2^11 = 2048 states
         self.state_size = 2048
