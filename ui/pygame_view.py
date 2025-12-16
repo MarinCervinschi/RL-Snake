@@ -1,5 +1,7 @@
-import pygame
 from typing import Optional
+
+import pygame
+
 from core.interfaces import IRenderer
 from game.entities import Point
 

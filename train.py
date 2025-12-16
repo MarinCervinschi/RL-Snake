@@ -107,7 +107,6 @@ def train(
                     stats = {
                         "episode": episode,
                         "record": record_score,
-                        "epsilon": getattr(agent_obj, "epsilon", 0.0),
                     }
                     renderer.render(game.snake, game.food, score, stats)
 
