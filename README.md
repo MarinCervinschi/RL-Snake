@@ -31,7 +31,7 @@ This project implements a **rigorous comparative study** of reinforcement learni
 
 ### Core MDP Formulation
 
-**[→ Complete MDP Formulation](docs/mdp.md)** ⭐ **START HERE**
+**[→ Complete MDP Formulation](docs/mdp.md)
 
 This document provides the mathematical foundation:
 
@@ -47,7 +47,7 @@ This document provides the mathematical foundation:
 
 #### 1. Tabular Q-Learning (Classical RL)
 
-**[→ Tabular Q-Learning Documentation](docs/tabular_q_learning.md)** 🚧 **TODO**
+**[→ Tabular Q-Learning Documentation](docs/tabular_q_learning.md)
 
 A classical value-based method using lookup tables.
 
@@ -68,7 +68,7 @@ A classical value-based method using lookup tables.
 
 #### 2. Deep Q-Network with CNN (Modern Value-Based RL)
 
-**[→ DQN-CNN Documentation](docs/dqn_cnn.md)** 🚧 **TODO**
+**[→ DQN-CNN Documentation](docs/dqn_cnn.md)
 
 A modern value-based method using convolutional neural networks.
 
@@ -89,7 +89,7 @@ A modern value-based method using convolutional neural networks.
 
 #### 3. Proximal Policy Optimization (Modern Policy-Based RL)
 
-**[→ PPO Documentation](docs/ppo.md)** 🚧 **TODO**
+**[→ PPO Documentation](docs/ppo.md)
 
 A state-of-the-art policy gradient method.
 

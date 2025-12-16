@@ -1,185 +1,354 @@
-# Tabular Q-Learning: Mathematical Deep Dive
+# Tabular Q-Learning for Snake Game
+
+> **Prerequisites:** Read the [Complete MDP Formulation](mdp_full_formulation.md) first to understand the state space, action space, and problem structure.
 
 ## Overview
 
-Tabular Q-Learning is a **model-free** reinforcement learning algorithm that learns the optimal policy by maintaining a lookup table of Q-values (Quality values) for every state-action pair.
+**Tabular Q-Learning** is a classical reinforcement learning algorithm that stores Q-values (action-value estimates) in a lookup table. For each state-action pair $(s, a)$, the algorithm maintains an explicit value $Q(s, a)$ representing the expected cumulative reward of taking action $a$ in state $s$ and following the optimal policy thereafter.
 
-Unlike Deep Reinforcement Learning (which uses Neural Networks), this agent uses a mathematical table to "remember" the value of every possible move in every possible situation.
+**Key Characteristic:** Every unique state gets its own row in the table. This works for small state spaces but becomes impractical as the number of states grows exponentially.
 
-## 1. The Core Concept
+## Algorithm Fundamentals
 
-The goal of the agent is to learn a policy $\pi$ that tells it the best **Action** $(a)$ to take for any given **State** $(s)$.
+### The Q-Table
 
-It does this by maintaining a **Q-Table** (Quality Table), a matrix of size $2048 \times 3$.
+The Q-table is a 2D data structure:
 
-- **Rows (2048):** Represents every unique configuration of the environment the snake can see.
-- **Columns (3):** Represents the actions: `[Straight, Right Turn, Left Turn]`.
-- **Values:** The "score" or expected future reward for taking that action in that state.
+$$Q: \mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$$
 
-## 2. The Mathematics (Bellman Equation)
+**Structure:**
+```
+           Action 0   Action 1   Action 2   Action 3
+           (UP)       (RIGHT)    (DOWN)     (LEFT)
+State 0  [  0.0    ,   0.0    ,   0.0    ,   0.0   ]
+State 1  [  2.3    ,   5.7    ,  -1.2    ,   3.4   ]
+State 2  [ -0.8    ,   8.9    ,   4.2    ,   1.1   ]
+...
+State N  [  1.5    ,   3.2    ,   0.9    ,  -2.1   ]
+```
 
-The agent updates the Q-Table using the **Bellman Equation**. This formula allows the agent to learn from its mistakes and successes retroactively.
+**Interpretation:** For State 1, the best action is Action 1 (RIGHT) with Q-value 5.7.
 
-$$Q^{new}(s, a) \leftarrow Q(s, a) + \alpha \cdot \left[ R + \gamma \cdot \max_{a'} Q(s', a') - Q(s, a) \right]$$
+### The Bellman Update Rule
 
-Where:
+Q-Learning updates the table using the **Bellman equation**:
 
-- $Q(s, a)$: The current "trusted" value of taking action $a$ in state $s$.
-- $\alpha$ (**Alpha**): The **Learning Rate**. How much we overwrite old knowledge with new information.
-- $R$ (**Reward**): The immediate feedback from the environment (+10 for food, -10 for death).
-- $\gamma$ (**Gamma**): The **Discount Factor**. How much we care about _future_ rewards versus immediate ones.
-- $\max_{a'} Q(s', a')$: The best possible score we think we can get from the _next_ state $s'$.
+$$Q(s, a) \leftarrow Q(s, a) + \alpha \left[ r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right]$$
 
-### Breaking Down the Equation
+**Components:**
+- $\alpha \in (0, 1]$: Learning rate (how fast to update beliefs)
+- $r$: Immediate reward received
+- $\gamma \in [0, 1]$: Discount factor (importance of future rewards)
+- $\max_{a'} Q(s', a')$: Best Q-value achievable from next state $s'$
 
-The Bellman equation can be understood as:
+**Intuition:** 
+> "Update my estimate of Q(s,a) by blending it with what I actually observed: the reward r plus the discounted value of the best action from the next state."
 
-$$\text{New Estimate} = \text{Old Estimate} + \text{Learning Rate} \times \text{Error}$$
+### The Learning Process
 
-Where the **Error** (also called TD Error - Temporal Difference Error) is:
+**Step-by-step:**
+1. Observe current state $s$
+2. Choose action $a$ using ε-greedy policy
+3. Execute action, observe reward $r$ and next state $s'$
+4. Update: $Q(s, a) \leftarrow Q(s, a) + \alpha [r + \gamma \max_{a'} Q(s', a') - Q(s, a)]$
+5. Repeat until episode terminates
 
-$$\text{Error} = \underbrace{R + \gamma \cdot \max_{a'} Q(s', a')}_{\text{Target (what we observe)}} - \underbrace{Q(s, a)}_{\text{Current estimate}}$$
+**Convergence Property:** Under mild conditions (all state-action pairs visited infinitely often, appropriate learning rate decay), Q-Learning provably converges to the optimal Q-function $Q^*$.
 
-This tells us how wrong our current estimate was compared to what we actually experienced.
+## State Representation Challenge
 
-## 3. The State Space (Inputs)
+### The Core Problem
 
-A raw $20 \times 20$ grid has $400^{100}$ possibilities (each cell can be empty, snake body, or food, across the entire snake length); far too many for a simple table. We compress the world into **11 Boolean Sensors**.  
-This reduces the state space to $2^{11} = 2048$ unique states.
+In our full MDP formulation, a state consists of:
+- Full grid configuration (H×W with 3 channels)
+- Current direction
 
-The State Vector is a list of 11 `0`s and `1`s:
+For a 10×10 grid, the state space is approximately $10^9$ states. We cannot create a table with a billion rows!
 
-### Danger Sensors (3 features)
+### State Hashing Strategy
 
-1. **Danger Straight**: Is there a wall or body part directly in front?
-2. **Danger Right**: Is there a wall or body part to the right relative to the head?
-3. **Danger Left**: Is there a wall or body part to the left relative to the head?
+**Solution:** Convert the grid state into a hashable representation.
 
-### Direction Sensors (4 features)
+**Option 1: Position Tuple**
+```python
+def state_to_hash(state):
+    """Convert GridState to hashable tuple"""
+    snake_positions = tuple(tuple(pos) for pos in state.snake)
+    food_position = tuple(state.food)
+    direction = state.direction.value
+    return (snake_positions, food_position, direction)
+```
 
-4. **Moving Left**: Is the snake currently facing West?
-5. **Moving Right**: Is the snake currently facing East?
-6. **Moving Up**: Is the snake currently facing North?
-7. **Moving Down**: Is the snake currently facing South?
+**Example:**
+```
+Snake: [(2,2), (2,1), (2,0)]
+Food: (3,4)
+Direction: RIGHT
 
-### Food Location Sensors (4 features)
+Hash: (((2,2), (2,1), (2,0)), (3,4), 1)
+```
 
-8. **Food Left**: Is the apple x-coordinate < head x-coordinate?
-9. **Food Right**: Is the apple x-coordinate > head x-coordinate?
-10. **Food Up**: Is the apple y-coordinate < head y-coordinate?
-11. **Food Down**: Is the apple y-coordinate > head y-coordinate?
+**Option 2: Grid Encoding**
+```python
+def state_to_hash(state):
+    """Convert grid to binary string"""
+    # Flatten 3-channel grid and convert to binary string
+    flat = state.grid.flatten()
+    return tuple(flat)  # Hashable tuple of 0s and 1s
+```
 
-**Example:**  
-If the snake is moving **Up**, there is a **Wall on the Left**, and the **Apple is above**, the vector looks like:  
-`[0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0]`
+### Dictionary-Based Q-Table
 
-This binary vector is then converted to a decimal index (0-2047) to access the Q-Table row.
+Instead of pre-allocating a massive array, use a **dictionary**:
 
-## 4. Hyperparameters
+```python
+q_table = {}  # Key: state_hash, Value: [Q(s,a₀), Q(s,a₁), Q(s,a₂), Q(s,a₃)]
 
-These values in [config.py](../config.py) control the learning behavior.
+def get_q_values(state_hash):
+    if state_hash not in q_table:
+        q_table[state_hash] = [0.0, 0.0, 0.0, 0.0]  # Initialize
+    return q_table[state_hash]
+```
 
-| Parameter           | Symbol           | Value   | Explanation                                                                                                                       |
-| ------------------- | ---------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Learning Rate**   | $\alpha$         | `0.1`   | A lower value means the agent learns slowly but stably. A high value makes it unstable.                                           |
-| **Discount Factor** | $\gamma$         | `0.9`   | High importance on future rewards. The agent learns that "moving towards food" is good because it leads to "eating food" later.   |
-| **Epsilon (Start)** | $\epsilon$       | `1.0`   | Probability of choosing a **random action**. We start at 100% random (Exploration).                                               |
-| **Epsilon Decay**   | -                | `0.995` | After every game, we multiply $\epsilon$ by this. Over time, the agent stops exploring and starts using its brain (Exploitation). |
-| **Min Epsilon**     | $\epsilon_{min}$ | `0.01`  | We always keep a 1% chance of randomness to prevent getting stuck in loops.                                                       |
+**Advantage:** Only stores states that have been visited (sparse representation).
 
-### Why These Values?
+**Disadvantage:** Still limited by the number of reachable states, which grows exponentially with grid size.
 
-**Learning Rate (α = 0.1):**
+## Action Selection: ε-Greedy Policy
 
-- Too high (>0.5): Overwrites old knowledge too quickly, unstable learning
-- Too low (<0.01): Takes forever to learn, might never converge
-- 0.1 is a sweet spot: Learns steadily without forgetting
+The agent balances **exploration** (trying new actions) and **exploitation** (using known good actions):
 
-**Discount Factor (γ = 0.9):**
+$$\pi(s) = \begin{cases}
+\text{random action} & \text{with probability } \epsilon \\
+\arg\max_a Q(s, a) & \text{with probability } 1 - \epsilon
+\end{cases}$$
 
-- γ = 0: Only cares about immediate reward (myopic)
-- γ = 1: Treats future rewards equally to immediate ones
-- 0.9: Values a reward 3 steps away at 0.9³ ≈ 0.73 of its actual value
+**Exploration Decay:**
+- Start: $\epsilon = 1.0$ (100% random exploration)
+- Decay: $\epsilon \leftarrow \epsilon \times 0.995$ after each episode
+- Minimum: $\epsilon_{\min} = 0.01$ (always maintain 1% exploration)
 
-**Epsilon Decay (0.995):**
+**Rationale:** Early in training, Q-values are unreliable → explore widely. Later, Q-values are more accurate → exploit learned policy.
 
-- After 1000 episodes: ε ≈ 0.006 (almost pure exploitation)
-- Gradual transition from exploration to exploitation
+## Hyperparameters
 
-## 5. Decision Making (Epsilon-Greedy Strategy)
+| Parameter | Symbol | Recommended Value | Explanation |
+|-----------|--------|-------------------|-------------|
+| **Learning Rate** | $\alpha$ | 0.1 | Standard for tabular methods; balances stability and speed |
+| **Discount Factor** | $\gamma$ | 0.99 | High value for long-term planning (full grid needs foresight) |
+| **Initial Epsilon** | $\epsilon_0$ | 1.0 | Start with full exploration |
+| **Epsilon Decay** | - | 0.995 | Gradual transition to exploitation |
+| **Minimum Epsilon** | $\epsilon_{\min}$ | 0.01 | Maintain small exploration to avoid getting stuck |
 
-The agent does not always choose the best known move. It uses an **Epsilon-Greedy** strategy to balance curiosity with performance.
+### Why α = 0.1?
 
-1. Generate a random number $r$ between 0 and 1.
-2. **If $r < \epsilon$ (Explore):** Pick a random action (Straight, Left, or Right). This helps discover new strategies.
-3. **If $r > \epsilon$ (Exploit):** Query the Q-Table for the current state row and pick the action with the highest value.
+**Too high (α > 0.5):** New experiences drastically overwrite old knowledge → unstable, oscillating Q-values
 
-$$\text{Action} = \arg\max_{a} Q(s, a)$$
+**Too low (α < 0.01):** Learning is extremely slow → may never converge in reasonable time
 
-### The Exploration-Exploitation Tradeoff
+**α = 0.1:** Good balance; each update adjusts Q-value by 10% toward the observed target.
 
-This is one of the fundamental challenges in RL:
+### Why γ = 0.99?
 
-- **Exploration:** Try new actions to discover better strategies
-- **Exploitation:** Use known good actions to maximize reward
+With larger grids, the snake may need 20-30 steps to reach food. With γ = 0.99:
 
-Early training (ε = 1.0): 100% exploration, learning the environment  
-Mid training (ε = 0.5): Balanced exploration and exploitation  
-Late training (ε = 0.01): 99% exploitation, refined strategy
+$$\text{Reward 30 steps away: } 10 \times 0.99^{30} \approx 7.4$$
 
-## 6. The Reward Function ($R$)
+Still significant! With γ = 0.9, it would only be worth ~0.4.
 
-In Reinforcement Learning, the agent does not have a teacher telling it "turn left." Instead, it takes an action and receives a numerical **Reward** from the environment. The agent's sole purpose is to maximize the total sum of these rewards.
+## Expected Behavior by Grid Size
 
-We use a technique called **Reward Shaping** to guide the snake towards the desired behavior.
+### 5×5 Grid: ✅ Success
 
-### The Values
+**State Space:** ~10,000 - 100,000 reachable states
 
-| Event                 | Reward Value | Purpose                                                                                                                                                                  |
-| --------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Eat Food**          | **+10**      | **Positive Reinforcement:** This is the primary goal. We give a large positive number so the agent learns that state configurations leading to food are highly valuable. |
-| **Collision (Death)** | **-10**      | **Negative Reinforcement:** Hitting a wall or itself is the worst possible outcome. This penalty teaches the agent to avoid "Dangerous" states.                          |
-| **Move (Empty Step)** | **0**        | **Neutral/Efficiency:** Currently, we give 0 for simply surviving.                                                                                                       |
+**Expected Performance:**
+- Episodes to convergence: 500-1000
+- Final average score: 8-12 apples
+- Training time: 1-2 minutes
 
-### Why These Numbers? (The "Credit Assignment" Problem)
+**Q-Table Size:** ~1-10 MB (feasible)
 
-If we only gave a reward of `+1` for food and `-1` for death, the agent might not distinguish clearly between a "great move" and a "tragic mistake."
+**Behavior:** Smooth learning curve, converges to near-optimal policy. The agent learns to navigate efficiently, avoid walls, and pursue food.
 
-- **Magnitude Matters:** The reward for eating (+10) must be high enough to justify the risk of moving.
-- **The Horizon:** Because our **Discount Factor ($\gamma$)** is 0.9, the agent realizes that a move _now_ that leads to food _3 steps later_ is worth:
+---
 
-$$\text{Reward} \approx 0 + (0.9 \times 0) + (0.9^2 \times 0) + (0.9^3 \times 10) \approx 7.29$$
+### 7×7 Grid: ⚠️ Marginal
 
-This mathematical "scent" draws the snake toward the apple.
+**State Space:** ~1-10 million reachable states
 
-### Common Pitfalls We Avoided
+**Expected Performance:**
+- Episodes to convergence: 5000+ (may not fully converge)
+- Final average score: 3-7 apples
+- Training time: 10-30 minutes
 
-1. **The Cowardly Agent:** If we set the death penalty too high (e.g., `-10,000`), the agent might simply freeze or spin in a safe circle forever, afraid to explore.
-2. **The Looping Agent:** If we gave `+1` just for staying alive, the agent would learn to ignore the food and just move in circles to farm "survival points" indefinitely. By making the food reward dominant (+10), we force goal-oriented behavior.
-3. **The Impatient Agent:** If we used γ = 0.1, the agent would only value immediate rewards and might make reckless moves.
+**Q-Table Size:** ~100 MB - 1 GB
 
-## 7. Performance Metrics
+**Behavior:** Learning is noisy and slow. The agent may learn basic strategies but struggles to refine the policy. Many states are visited only once or twice, leading to unreliable Q-values.
 
-**1. Learning Curve (Total Score)**
+---
 
-- **What it measures:** The number of apples eaten per episode.
-- **Success Indicator:** The trend line should go **UP**.
-- **Interpretation:** Early episodes start near 0 (random movement). As the Q-Table fills, the agent survives longer and accumulates higher rewards.
+### 10×10 Grid: ❌ Failure
 
-**2. Pathfinding Efficiency (Steps per Apple)**
+**State Space:** ~1 billion+ reachable states
 
-- **What it measures:** The average number of moves required to secure one point of reward.
-- **Success Indicator:** The trend line should go **DOWN**.
-- **Interpretation:** This separates "Intelligence" from "Luck." If the score is high but this metric stays high, the snake is just wandering randomly until it hits food. If this metric drops, the agent is actively optimizing its path (learning navigation).
+**Expected Performance:**
+- Episodes to convergence: Never
+- Final average score: 1-3 apples (random-like behavior)
+- Training time: Hours with no improvement
 
-### Sample Training Metrics (After 1000 Episodes)
+**Q-Table Size:** 10-100 GB (impractical)
 
-[![Training Metrics](training_metrics_episode_1000.png)](training_metrics_episode_1000.png)
+**Behavior:** 
+- The agent visits less than 0.01% of the state space even after 10,000 episodes
+- Q-values remain mostly at initialization (0.0)
+- No meaningful learning occurs
+- Performance is essentially random
 
-## 8. Convergence Guarantees
+**This is the curse of dimensionality in action.**
 
-Under the following conditions, Q-Learning is **guaranteed** to converge to the optimal policy:
+---
 
-1. All state-action pairs are visited infinitely often
-2. Learning rate satisfies: $\sum_{t=1}^{\infty} \alpha_t = \infty$ and $\sum_{t=1}^{\infty} \alpha_t^2 < \infty$
-3. Rewards are bounded
+## The Curse of Dimensionality
+
+### Mathematical Explanation
+
+State space size grows **super-exponentially** with grid dimensions:
+
+| Grid | Cells | Approx. States | Q-Table Memory |
+|------|-------|----------------|----------------|
+| 5×5 | 25 | $10^4$ | ~1 MB ✅ |
+| 7×7 | 49 | $10^6$ | ~100 MB ⚠️ |
+| 10×10 | 100 | $10^9$ | ~10 GB ❌ |
+| 20×20 | 400 | $10^{40}$ | Astronomical ❌ |
+
+### Why This Happens
+
+For a grid of size $H \times W$ with a snake of length $L$:
+- Snake can occupy $\binom{H \times W}{L}$ different position sets
+- For each position set, there are $\approx L!$ orderings (path configurations)
+- Food can be in $H \times W - L$ locations
+- Direction has 4 possibilities
+
+Rough estimate: $\mathcal{O}((H \times W)^L \times 4)$ states
+
+As the grid grows, $L$ can grow toward $H \times W$, causing exponential explosion.
+
+### Practical Implication
+
+**Even with sparse storage (dictionary), we cannot visit enough states to learn:**
+
+Suppose we train for 10,000 episodes, each lasting 100 steps on average:
+- Total steps: $10^6$
+- Unique states visited: $\sim 10^5 - 10^6$ (with some revisits)
+- For 10×10 grid with $10^9$ states: We visit only **0.1%** of the space!
+
+**Conclusion:** Tabular Q-Learning fundamentally cannot scale to medium/large grids.
+
+## Advantages of Tabular Q-Learning
+
+Despite its limitations, tabular Q-Learning has important strengths:
+
+### ✅ Simplicity
+- Easy to implement (~50 lines of code)
+- No neural network complexity
+- No hyperparameter tuning for network architecture
+
+### ✅ Interpretability
+- Can inspect exact Q-values for any state
+- Understand why the agent chose a particular action
+- Debug by examining Q-table entries
+
+### ✅ Theoretical Guarantees
+- Proven convergence to optimal policy $Q^*$ (under conditions)
+- No approximation error (unlike function approximation)
+- Exact value function representation
+
+### ✅ Fast Updates
+- O(1) table lookup and update
+- No gradient computation or backpropagation
+- Suitable for real-time learning
+
+### ✅ Pedagogical Value
+- Teaches core RL concepts without deep learning complexity
+- Shows the curse of dimensionality empirically
+- Motivates need for function approximation
+
+## Limitations of Tabular Q-Learning
+
+### ❌ Exponential State Space Growth
+Cannot handle problems with more than ~10^6 states.
+
+### ❌ No Generalization
+Learning about state $s_1$ provides zero information about similar state $s_2$. Each state is treated independently.
+
+**Example:** 
+- State A: Snake at (5,5), food at (7,5)
+- State B: Snake at (5,6), food at (7,6)
+
+These states are almost identical (shifted by one cell), but the agent treats them as completely unrelated.
+
+### ❌ Sample Inefficiency
+Must visit each state many times to get accurate Q-values. With sparse state visitation, most Q-values remain unreliable.
+
+### ❌ Memory Constraints
+Even with sparse storage, dictionaries with millions of entries consume significant RAM.
+
+### ❌ Cannot Handle Continuous States
+Requires discrete state space. Cannot directly handle continuous observations like exact pixel coordinates.
+
+## Comparison Preview
+
+### Tabular Q-Learning vs. DQN
+
+| Aspect | Tabular Q-Learning | DQN (next doc) |
+|--------|-------------------|-----------------|
+| **Representation** | Hash table | Neural network |
+| **Generalization** | None | Excellent |
+| **Memory** | O(\|visited states\|) | O(parameters) ~ constant |
+| **Grid Size Limit** | ~7×7 | 20×20+ |
+| **Sample Efficiency** | Low (must revisit states) | High (learns from similar states) |
+| **Interpretability** | High | Low |
+| **Implementation** | Simple | Complex |
+
+### When to Use Tabular Q-Learning
+
+✅ **Use tabular methods when:**
+- State space is small (<100k states)
+- States are discrete and enumerable
+- You need interpretability
+- Problem is for learning/teaching purposes
+
+❌ **Avoid tabular methods when:**
+- State space is large (>1M states)
+- States are continuous
+- You need generalization
+- Computational resources are limited
+
+## Summary
+
+**Tabular Q-Learning** is the foundation of reinforcement learning, providing:
+- A clear introduction to value-based methods
+- Theoretical grounding with convergence guarantees
+- Empirical demonstration of the curse of dimensionality
+
+**For our Snake project:**
+- ✅ Works well on 5×5 grid (demonstrates the algorithm)
+- ⚠️ Struggles on 7×7 grid (shows scaling challenges)
+- ❌ Fails on 10×10 grid (motivates deep RL)
+
+This failure is not a weakness of the project—it's a **feature**! It demonstrates empirically why the field moved toward function approximation and deep reinforcement learning.
+
+**Next:** See how [Deep Q-Networks (DQN)](dqn_cnn.md) solve these limitations using neural networks and convolutional architectures.
+
+---
+
+## Key Takeaways
+
+1. **Q-Learning is elegant and simple** - One update rule, proven convergence
+2. **The curse of dimensionality is real** - State space grows exponentially
+3. **Sparse storage helps but isn't enough** - Can't visit enough states to learn
+4. **Tabular methods motivate deep RL** - Empirically shows why we need approximation
+5. **Perfect for small problems** - Still the go-to for discrete, small state spaces
+
+This is why we implement tabular Q-Learning first: to understand both its power and its fundamental limitations.
