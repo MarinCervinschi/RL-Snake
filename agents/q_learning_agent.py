@@ -14,7 +14,7 @@ class QLearningAgent(IAgent):
     Tabular Q-Learning with dictionary-based Q-table.
 
     Uses state hashing to create a sparse Q-table that only stores
-    visited states. Still limited by curse of dimensionality.
+    visited states.
     """
 
     def __init__(
@@ -49,8 +49,6 @@ class QLearningAgent(IAgent):
         # Value: np.array of shape (4,) for 4 absolute actions
         self.q_table: Dict[Tuple, np.ndarray] = {}
 
-        # Statistics
-        self.states_visited = 0
         self.updates_performed = 0
 
     def get_action(self, state: State) -> Action:
@@ -65,12 +63,9 @@ class QLearningAgent(IAgent):
         """
         state_key = self._state_to_key(state)
 
-        # Initialize Q-values if first visit to this state
         if state_key not in self.q_table:
             self.q_table[state_key] = np.zeros(4, dtype=np.float32)
-            self.states_visited += 1
 
-        # ε-greedy action selection
         if random.random() < self.epsilon:
             # Exploration: Random action
             return random.choice(list(Action))
@@ -104,19 +99,14 @@ class QLearningAgent(IAgent):
         next_state_key = self._state_to_key(next_state)
         action_idx = action.value
 
-        # Initialize Q-values if needed
         if state_key not in self.q_table:
             self.q_table[state_key] = np.zeros(4, dtype=np.float32)
-            self.states_visited += 1
 
         if next_state_key not in self.q_table:
             self.q_table[next_state_key] = np.zeros(4, dtype=np.float32)
-            self.states_visited += 1
 
-        # Current Q-value
         current_q = self.q_table[state_key][action_idx]
 
-        # Compute target Q-value
         if done:
             # Terminal state: no future rewards
             target_q = reward
@@ -125,14 +115,12 @@ class QLearningAgent(IAgent):
             max_next_q = np.max(self.q_table[next_state_key])
             target_q = reward + self.discount_factor * max_next_q
 
-        # Update Q-value using Bellman equation
         self.q_table[state_key][action_idx] = current_q + self.learning_rate * (
             target_q - current_q
         )
 
         self.updates_performed += 1
 
-        # Decay epsilon after episode ends
         if done and self.epsilon > self.min_epsilon:
             self.epsilon *= self.epsilon_decay
 
@@ -169,7 +157,6 @@ class QLearningAgent(IAgent):
             "epsilon": self.epsilon,
             "learning_rate": self.learning_rate,
             "discount_factor": self.discount_factor,
-            "states_visited": self.states_visited,
             "updates_performed": self.updates_performed,
         }
 
@@ -177,8 +164,8 @@ class QLearningAgent(IAgent):
             pickle.dump(save_dict, f)
 
         print(f"💾 Model saved to {filepath}")
-        print(f"   States visited: {self.states_visited:,}")
         print(f"   Q-table size: {len(self.q_table):,} entries")
+        print(f"   Updates performed: {self.updates_performed:,}")
         print(f"   Memory: ~{self._estimate_memory_mb():.2f} MB")
 
     def load(self, filepath: str = "models/tabular_q_learning.pkl") -> None:
@@ -203,7 +190,6 @@ class QLearningAgent(IAgent):
         self.epsilon = save_dict["epsilon"]
         self.learning_rate = save_dict["learning_rate"]
         self.discount_factor = save_dict["discount_factor"]
-        self.states_visited = save_dict.get("states_visited", len(self.q_table))
         self.updates_performed = save_dict.get("updates_performed", 0)
 
         print(f"✅ Model loaded from {filepath}")
@@ -224,21 +210,6 @@ class QLearningAgent(IAgent):
         total_bytes = len(self.q_table) * bytes_per_entry
         return total_bytes / (1024 * 1024)
 
-    def get_q_values(self, state: State) -> np.ndarray:
-        """
-        Get Q-values for a state (for visualization/debugging).
-
-        Args:
-            state: State to query
-
-        Returns:
-            Array of Q-values for each action
-        """
-        state_key = self._state_to_key(state)
-        if state_key not in self.q_table:
-            return np.zeros(4, dtype=np.float32)
-        return self.q_table[state_key].copy()
-
     def _check_configuration(self) -> None:
         """Check for suboptimal configurations and warn user."""
         if self.grid_size > 7:
@@ -257,5 +228,4 @@ class QLearningAgent(IAgent):
             f"grid_size={self.grid_size}, "
             f"q_table_size={len(self.q_table)}, "
             f"epsilon={self.epsilon:.4f}, "
-            f"states_visited={self.states_visited:,})"
         )
