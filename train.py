@@ -138,8 +138,8 @@ def train(
 
 EPISODES = {
     "tabular": 1000,
-    "dqn": 5000,
-    "ppo": 10000,
+    "dqn": 3000,
+    "ppo": 5000,
 }
 
 GRID_SIZES = {

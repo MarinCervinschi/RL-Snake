@@ -176,9 +176,6 @@ class DQNAgent(IAgent):
     - ε-greedy exploration
     """
 
-    # Training hyperparameters
-    EPISODES = 3000  # Recommended episodes for convergence
-
     def __init__(
         self,
         grid_size: int = 20,
@@ -411,17 +408,6 @@ class DQNAgent(IAgent):
         print(f"   Episodes trained: {self.episodes_trained}")
         print(f"   Steps: {self.steps:,}")
         print(f"   Current epsilon: {self.epsilon:.4f}")
-
-
-    def reset_epsilon(self, epsilon: float = 1.0) -> None:
-        """
-        Reset exploration rate.
-
-        Args:
-            epsilon: New epsilon value
-        """
-        self.epsilon = epsilon
-        print(f"🔄 Epsilon reset to {epsilon}")
 
     def get_q_values(self, state: State) -> np.ndarray:
         """

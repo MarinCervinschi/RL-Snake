@@ -242,9 +242,6 @@ class PPOAgent(IAgent):
     - Entropy bonus for exploration
     """
 
-    # Training hyperparameters
-    EPISODES = 5000  # Recommended episodes for convergence
-
     def __init__(
         self,
         grid_size: int = 20,
@@ -583,7 +580,6 @@ class PPOAgent(IAgent):
         print(f"   Episodes trained: {self.episodes_trained}")
         print(f"   Steps: {self.steps:,}")
         print(f"   Updates: {self.updates}")
-
 
     def get_value(self, state: State) -> float:
         """

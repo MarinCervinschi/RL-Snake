@@ -239,16 +239,6 @@ class QLearningAgent(IAgent):
             return np.zeros(4, dtype=np.float32)
         return self.q_table[state_key].copy()
 
-    def reset_epsilon(self, epsilon: float = 1.0) -> None:
-        """
-        Reset exploration rate (useful for re-training).
-
-        Args:
-            epsilon: New epsilon value
-        """
-        self.epsilon = epsilon
-        print(f"🔄 Epsilon reset to {epsilon}")
-
     def _check_configuration(self) -> None:
         """Check for suboptimal configurations and warn user."""
         if self.grid_size > 7:
