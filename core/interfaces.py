@@ -18,7 +18,16 @@ class IRenderer(ABC):
 
 
 class IAgent(ABC):
-    EPISODES: int
+
+    def __init__(self, grid_size: int):
+        """
+        Initialize agent.
+
+        Args:
+            grid_size: Size of the game grid
+        """
+        self.grid_size = grid_size
+        self._check_configuration()
 
     @abstractmethod
     def get_action(self, state: State) -> Action:
@@ -30,6 +39,21 @@ class IAgent(ABC):
         self, state: State, action: Action, reward: float, next_state: State, done: bool
     ) -> None:
         """Updates the agent's knowledge based on the transition."""
+        pass
+
+    @abstractmethod
+    def save(self, path: Optional[str] = None) -> None:
+        """Saves the agent's model or parameters to disk."""
+        pass
+
+    @abstractmethod
+    def load(self, path: Optional[str] = None) -> None:
+        """Loads the agent's model or parameters from disk."""
+        pass
+
+    @abstractmethod
+    def _check_configuration(self) -> None:
+        """Optional method to warn about suboptimal configurations."""
         pass
 
 
