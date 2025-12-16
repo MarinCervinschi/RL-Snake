@@ -56,13 +56,13 @@ Where:
 
 The grid $G$ has three channels:
 
-**Channel 0 - Snake Head:** $G[:, :, 0]$
+**Channel 0 - Snake Head:** $G[:, :, 0]$.  
 $$G_{ij}^{(0)} = \begin{cases} 1 & \text{if cell }(i,j)\text{ contains snake head} \\ 0 & \text{otherwise} \end{cases}$$
 
-**Channel 1 - Snake Body:** $G[:, :, 1]$
+**Channel 1 - Snake Body:** $G[:, :, 1]$.  
 $$G_{ij}^{(1)} = \begin{cases} 1 & \text{if cell }(i,j)\text{ contains snake body segment} \\ 0 & \text{otherwise} \end{cases}$$
 
-**Channel 2 - Food:** $G[:, :, 2]$
+**Channel 2 - Food:** $G[:, :, 2]$.  
 $$G_{ij}^{(2)} = \begin{cases} 1 & \text{if cell }(i,j)\text{ contains food} \\ 0 & \text{otherwise} \end{cases}$$
 
 ### 2.3 State Space Constraints
