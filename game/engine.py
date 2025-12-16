@@ -1,9 +1,8 @@
 import random
 from typing import Optional, Tuple
 
-
-from .entities import Action, Direction, State, Point
 from .config import GameConfig
+from .entities import Action, Direction, Point, State
 
 
 class SnakeGameEngine:

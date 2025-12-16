@@ -1,10 +1,3 @@
-"""
-Deep Q-Network (DQN) Agent with CNN architecture.
-
-Uses convolutional neural networks to process the 3-channel grid state
-and learn Q-values through experience replay and target networks.
-"""
-
 import random
 from collections import deque
 from pathlib import Path
@@ -15,8 +8,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from game.entities import Action, State
 from core.interfaces import IAgent
+from game.entities import Action, State
 
 
 class ConvQNetwork(nn.Module):

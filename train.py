@@ -1,9 +1,9 @@
 import click
 from tqdm import tqdm
 
-from game.engine import SnakeGameEngine
-from game.config import GameConfig
 from core.factory import AgentFactory, RendererFactory
+from game.config import GameConfig
+from game.engine import SnakeGameEngine
 from utils.metrics import TrainingMetrics
 
 

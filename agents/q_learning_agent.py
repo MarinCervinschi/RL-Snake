@@ -5,8 +5,8 @@ from typing import Dict, Tuple
 
 import numpy as np
 
-from game.entities import Action, State
 from core.interfaces import IAgent
+from game.entities import Action, State
 
 
 class QLearningAgent(IAgent):

@@ -1,10 +1,3 @@
-"""
-Proximal Policy Optimization (PPO) Agent with Actor-Critic architecture.
-
-Uses policy gradient methods with clipped objective for stable training.
-Actor-Critic network with shared CNN backbone for spatial reasoning.
-"""
-
 from pathlib import Path
 from typing import List, Tuple
 
@@ -14,8 +7,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Categorical
 
-from game.entities import Action, State
 from core.interfaces import IAgent
+from game.entities import Action, State
 
 
 class ActorCriticNetwork(nn.Module):
