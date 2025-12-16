@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from typing import List, Optional
 
@@ -21,12 +20,10 @@ class TrainingMetrics:
         """
 
         self.save_dir = Path(save_dir)
-        self.save_dir.mkdir(parents=True, exist_ok=True)
 
         # Episode data
         self.episodes: List[int] = []
         self.scores: List[int] = []
-        self.steps: List[int] = []
         self.rewards: List[float] = []
 
         # Derived metrics
@@ -47,7 +44,6 @@ class TrainingMetrics:
         """
         self.episodes.append(episode)
         self.scores.append(score)
-        self.steps.append(steps)
 
         if total_reward is not None:
             self.rewards.append(total_reward)
@@ -115,13 +111,16 @@ class TrainingMetrics:
         if not self.episodes:
             print("⚠️  No data to plot")
             return
+        
+        print("📈 Generating training plots...")
 
-        # Create figure with 3 subplots
-        fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+        # Create figure with 2 subplots in a single row
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
         fig.suptitle("Training Metrics", fontsize=16, fontweight="bold")
 
         # Plot 1: Score over time
-        ax1 = axes[0, 0]
+        ax1 = axes[0]
         ax1.plot(self.episodes, self.scores, alpha=0.3, color="blue", label="Raw Score")
 
         if len(self.scores) > 50:
@@ -142,29 +141,8 @@ class TrainingMetrics:
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        # Plot 2: Steps per episode
-        ax2 = axes[0, 1]
-        ax2.plot(self.episodes, self.steps, alpha=0.3, color="green")
-
-        if len(self.steps) > 50:
-            window = min(50, len(self.steps) // 10)
-            moving_avg = self._moving_average(self.steps, window)
-            ax2.plot(
-                self.episodes,
-                moving_avg,
-                color="darkgreen",
-                linewidth=2,
-                label=f"Avg ({window} ep)",
-            )
-
-        ax2.set_xlabel("Episode")
-        ax2.set_ylabel("Steps")
-        ax2.set_title("Episode Length")
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
-
-        # Plot 3: Efficiency (steps per apple)
-        ax3 = axes[1, 0]
+        # Plot 2: Efficiency (steps per apple)
+        ax2 = axes[1]
 
         # Filter out zero-score episodes for efficiency plot
         valid_indices = [i for i, s in enumerate(self.scores) if s > 0]
@@ -172,7 +150,7 @@ class TrainingMetrics:
             valid_episodes = [self.episodes[i] for i in valid_indices]
             valid_efficiency = [self.steps_per_apple[i] for i in valid_indices]
 
-            ax3.plot(
+            ax2.plot(
                 valid_episodes,
                 valid_efficiency,
                 alpha=0.3,
@@ -183,7 +161,7 @@ class TrainingMetrics:
             if len(valid_efficiency) > 50:
                 window = min(50, len(valid_efficiency) // 10)
                 moving_avg = self._moving_average(valid_efficiency, window)
-                ax3.plot(
+                ax2.plot(
                     valid_episodes,
                     moving_avg,
                     color="darkorange",
@@ -191,59 +169,27 @@ class TrainingMetrics:
                     label=f"Avg ({window} ep)",
                 )
 
-            ax3.set_xlabel("Episode")
-            ax3.set_ylabel("Steps per Apple")
-            ax3.set_title("Pathfinding Efficiency")
-            ax3.legend()
-            ax3.grid(True, alpha=0.3)
+            ax2.set_xlabel("Episode")
+            ax2.set_ylabel("Steps per Apple")
+            ax2.set_title("Pathfinding Efficiency")
+            ax2.legend()
+            ax2.grid(True, alpha=0.3)
         else:
-            ax3.text(
+            ax2.text(
                 0.5,
                 0.5,
                 "No successful episodes yet",
                 ha="center",
                 va="center",
-                transform=ax3.transAxes,
+                transform=ax2.transAxes,
             )
-            ax3.set_title("Pathfinding Efficiency")
-
-        # Plot 4: Score distribution (histogram)
-        ax4 = axes[1, 1]
-        if len(self.scores) > 10:
-            ax4.hist(
-                self.scores,
-                bins=min(20, max(self.scores) + 1),
-                color="purple",
-                alpha=0.7,
-                edgecolor="black",
-            )
-            ax4.set_xlabel("Score")
-            ax4.set_ylabel("Frequency")
-            ax4.set_title("Score Distribution")
-            ax4.axvline(
-                np.mean(self.scores),
-                color="red",
-                linestyle="--",
-                linewidth=2,
-                label=f"Mean: {np.mean(self.scores):.2f}",
-            )
-            ax4.legend()
-            ax4.grid(True, alpha=0.3, axis="y")
-        else:
-            ax4.text(
-                0.5,
-                0.5,
-                "Not enough data for histogram",
-                ha="center",
-                va="center",
-                transform=ax4.transAxes,
-            )
-            ax4.set_title("Score Distribution")
+            ax2.set_title("Pathfinding Efficiency")
 
         plt.tight_layout()
 
         # Save to file
         if save:
+            self.save_dir.mkdir(parents=True, exist_ok=True)
             plot_path = self.save_dir / "training_metrics.png"
             plt.savefig(plot_path, dpi=150, bbox_inches="tight")
             print(f"📊 Plot saved to: {plot_path}")
