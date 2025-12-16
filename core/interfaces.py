@@ -47,7 +47,7 @@ class IAgent(ABC):
         pass
 
     @abstractmethod
-    def load(self, path: Optional[str] = None) -> None:
+    def load(self, path: Optional[str] = None, play: bool = False) -> None:
         """Loads the agent's model or parameters from disk."""
         pass
 

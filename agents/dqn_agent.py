@@ -228,6 +228,8 @@ class DQNAgent(IAgent):
         self.losses: List[float] = []
         self.episodes_trained = 0
 
+        self.load()  # Attempt to load existing model to continue training
+
     def get_action(self, state: State) -> Action:
         """
         Select action using ε-greedy policy.
@@ -371,7 +373,7 @@ class DQNAgent(IAgent):
         print(f"   Current epsilon: {self.epsilon:.4f}")
         print(f"   Replay buffer: {len(self.memory):,} transitions")
 
-    def load(self, filepath: str = "models/dqn_cnn.pkl") -> None:
+    def load(self, filepath: str = "models/dqn_cnn.pkl", play: bool = False) -> None:
         """
         Load model and training state.
 
@@ -383,6 +385,8 @@ class DQNAgent(IAgent):
         if not load_path.exists():
             print(f"⚠️  No saved model found at {filepath}")
             print(f"   Starting with randomly initialized network")
+            if play:
+                raise FileNotFoundError(f"No saved model found at {filepath}")
             return
 
         checkpoint = torch.load(load_path, map_location=self.device)

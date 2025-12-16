@@ -542,7 +542,7 @@ class PPOAgent(IAgent):
         print(f"   Steps: {self.steps:,}")
         print(f"   Updates: {self.updates}")
 
-    def load(self, filepath: str = "models/ppo.pkl") -> None:
+    def load(self, filepath: str = "models/ppo.pkl", play: bool = False) -> None:
         """
         Load model and training state.
 
@@ -554,6 +554,8 @@ class PPOAgent(IAgent):
         if not load_path.exists():
             print(f"⚠️  No saved model found at {filepath}")
             print(f"   Starting with randomly initialized network")
+            if play:
+                raise FileNotFoundError(f"No saved model found at {filepath}")
             return
 
         checkpoint = torch.load(load_path, map_location=self.device)

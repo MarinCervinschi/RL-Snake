@@ -168,7 +168,9 @@ class QLearningAgent(IAgent):
         print(f"   Updates performed: {self.updates_performed:,}")
         print(f"   Memory: ~{self._estimate_memory_mb():.2f} MB")
 
-    def load(self, filepath: str = "models/tabular_q_learning.pkl") -> None:
+    def load(
+        self, filepath: str = "models/tabular_q_learning.pkl", play: bool = False
+    ) -> None:
         """
         Load Q-table and agent state from file.
 
@@ -180,6 +182,8 @@ class QLearningAgent(IAgent):
         if not load_path.exists():
             print(f"⚠️  No saved model found at {filepath}")
             print(f"   Starting with empty Q-table")
+            if play:
+                raise FileNotFoundError(f"No saved model found at {filepath}")
             return
 
         with open(load_path, "rb") as f:
