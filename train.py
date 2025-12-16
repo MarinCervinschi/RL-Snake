@@ -127,17 +127,14 @@ def train(
     metrics.print_summary()
 
     if show_plots or save_plots:
-        print(f"📈 Generating plots...")
         metrics.plot(show=show_plots, save=save_plots)
         input("Press Enter to continue...") if show_plots else None
-        if save_plots:
-            print(f"   Plots saved to: results/{agent}_{grid_size}x{grid_size}/")
 
     print("\n✨ All done!\n")
 
 
 EPISODES = {
-    "tabular": 1000,
+    "tabular": 10000,
     "dqn": 3000,
     "ppo": 5000,
 }

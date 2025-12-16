@@ -131,29 +131,6 @@ class State:
         # Transpose from (H, W, 3) to (3, H, W)
         return np.transpose(self.grid, (2, 0, 1))
 
-    def to_hash(self) -> int:
-        """
-        Convert state to hash for tabular methods (dictionary-based Q-table).
-
-        Note: This is only practical for small grids (5x5, maybe 7x7).
-        For larger grids, this will create too many unique states.
-
-        Returns:
-            Hash of the state (based on snake positions, food, direction)
-        """
-        # Extract positions from grid
-        head_positions = np.argwhere(self.grid[:, :, 0] == 1.0)
-        body_positions = np.argwhere(self.grid[:, :, 1] == 1.0)
-        food_positions = np.argwhere(self.grid[:, :, 2] == 1.0)
-
-        # Convert to tuples for hashing
-        head_tuple = tuple(map(tuple, head_positions))
-        body_tuple = tuple(map(tuple, body_positions))
-        food_tuple = tuple(map(tuple, food_positions))
-        direction_value = self.direction.value
-
-        return hash((head_tuple, body_tuple, food_tuple, direction_value))
-
     def to_position_tuple(self) -> Tuple:
         """
         Alternative hash representation using position tuples.
@@ -213,13 +190,6 @@ class State:
             y, x = food_positions[0]
             return Point(x, y)
         return Point(0, 0)  # Fallback (shouldn't happen)
-
-    def clone(self) -> State:
-        """Create a deep copy of this state."""
-        new_state = State(self.grid_size)
-        new_state.grid = self.grid.copy()
-        new_state.direction = self.direction
-        return new_state
 
     def __repr__(self) -> str:
         """String representation for debugging."""
