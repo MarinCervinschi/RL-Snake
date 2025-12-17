@@ -114,10 +114,9 @@ def train(
 
             metrics.record_episode(episode, score, steps, episode_reward)
 
-            avg = np.mean(metrics.scores)
             pbar.set_postfix(
                 {
-                    "Avg Score": f"{avg:.2f}",
+                    "Avg Score": f"{metrics.get_recent_average_score():.2f}",
                     "Best": record_score,
                     "Eps": (
                         f"{agent_obj.epsilon:.2f}"  # type: ignore
