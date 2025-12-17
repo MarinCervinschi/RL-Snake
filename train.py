@@ -5,6 +5,7 @@ from core.factory import AgentFactory, RendererFactory
 from game.config import GameConfig
 from game.engine import SnakeGameEngine
 from utils.metrics import TrainingMetrics
+import numpy as np
 
 
 @click.command()
@@ -83,7 +84,8 @@ def train(
     record_score = 0
 
     try:
-        for episode in tqdm(range(1, episodes + 1), desc="Training"):
+        pbar = tqdm(range(1, episodes + 1), desc="Training")
+        for episode in pbar:
             state = game.reset()
             done = False
             episode_reward = 0
@@ -110,10 +112,22 @@ def train(
                     }
                     renderer.render(game.snake, game.food, score, stats)
 
+            metrics.record_episode(episode, score, steps, episode_reward)
+
+            avg = np.mean(metrics.scores)
+            pbar.set_postfix(
+                {
+                    "Avg Score": f"{avg:.2f}",
+                    "Best": record_score,
+                    "Eps": (
+                        f"{agent_obj.epsilon:.2f}"  # type: ignore
+                        if hasattr(agent_obj, "epsilon")
+                        else "N/A"
+                    ),
+                }
+            )
             if score > record_score:
                 record_score = score
-
-            metrics.record_episode(episode, score, steps, episode_reward)
 
     except KeyboardInterrupt:
         print("\n\n⚠️  Training interrupted by user")
