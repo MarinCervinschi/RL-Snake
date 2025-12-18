@@ -2,11 +2,10 @@ from typing import Optional
 
 import pygame
 
-from core.interfaces import IRenderer
 from game.entities import Point
 
 
-class PyGameRenderer(IRenderer):
+class PyGameRenderer:
     def __init__(
         self, width: int, height: int, cell_size: int = 30, speed: float = 0.1
     ):
