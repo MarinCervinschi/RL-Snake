@@ -3,11 +3,10 @@ import platform
 import time
 from typing import Optional
 
-from core.interfaces import IRenderer
 from game.entities import Point
 
 
-class TerminalRenderer(IRenderer):
+class TerminalRenderer:
     def __init__(self, width: int, height: int, speed: float = 0.1):
         self.width = width
         self.height = height
