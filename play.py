@@ -1,28 +1,41 @@
+"""
+Play script for visualizing trained agents.
+
+Usage:
+    python play.py --agent tabular --grid_size 5
+    python play.py --agent dqn --grid_size 10 --episodes 10
+    python play.py --agent ppo --grid_size 20 --ui terminal
+"""
+
 import time
-from tqdm import tqdm
 
 import click
+from tqdm import tqdm
 
-from core.factory import AgentFactory, RendererFactory
 from game.config import GameConfig
 from game.engine import SnakeGameEngine
+from ui import PyGameRenderer, TerminalRenderer
+from utils.agent_utils import AgentType, load_agent
 
 
 @click.command()
 @click.option(
     "--agent",
     type=click.Choice(["tabular", "dqn", "ppo"], case_sensitive=False),
-    default="tabular",
-    help="Agent type",
+    required=True,
+    help="Agent type to play",
 )
 @click.option(
     "--grid_size",
     type=int,
     default=None,
-    help="Grid size (auto-detected from filename if not specified)",
+    help="Grid size (default: 5 for tabular, 10 for dqn, 20 for ppo)",
 )
 @click.option(
-    "--episodes", type=int, default=5, help="Number of episodes to play (default: 5)"
+    "--episodes",
+    type=int,
+    default=5,
+    help="Number of episodes to play (default: 5)",
 )
 @click.option(
     "--ui",
@@ -37,57 +50,72 @@ from game.engine import SnakeGameEngine
     help="Rendering speed in seconds per frame (default: 0.1)",
 )
 @click.option(
-    "--greedy/--stochastic",
-    default=True,
-    help="Use greedy policy (no exploration) vs. stochastic (default: greedy)",
+    "--model_path",
+    type=str,
+    default=None,
+    help="Custom model path (optional)",
 )
 def play(
-    agent: str,
-    grid_size: int,
+    agent: AgentType,
+    grid_size: int | None,
     episodes: int,
     ui: str,
     speed: float,
-    greedy: bool,
+    model_path: str | None,
 ):
     """Watch a trained agent play Snake."""
 
-    grid_size = grid_size or GRID_SIZES[agent]
+    # Use default grid sizes if not specified
+    if grid_size is None:
+        grid_size = DEFAULT_GRID_SIZES[agent]
 
-    agent_obj = AgentFactory.create_agent(agent, grid_size)
-    agent_obj.load()
+    print(f"🎮 Loading {agent.upper()} agent for {grid_size}×{grid_size} grid...")
 
+    # Load trained agent
+    try:
+        agent_obj = load_agent(agent, grid_size, model_path)
+    except FileNotFoundError as e:
+        print(f"\n❌ Error: {e}")
+        print(f"\n💡 Train the agent first using the notebook:")
+        print(f"   notebooks/train_{agent}.ipynb")
+        return
+
+    # Create game environment
     config = GameConfig(grid_size=grid_size)
-
     game = SnakeGameEngine(config)
 
-    if greedy and hasattr(agent_obj, "epsilon"):
-        original_epsilon = agent_obj.epsilon  # type: ignore
-        agent_obj.epsilon = 0.0  # No exploration # type: ignore
-        print(f"   Set epsilon: {original_epsilon:.4f} → 0.0 (greedy)")
+    # Create renderer
+    if ui == "pygame":
+        renderer = PyGameRenderer(
+            width=grid_size, height=grid_size, cell_size=30, speed=speed
+        )
+    else:
+        renderer = TerminalRenderer(width=grid_size, height=grid_size, speed=speed)
 
-    renderer = RendererFactory.create_renderer(ui, grid_size, speed=speed)
-
+    # Play episodes
     scores = []
     steps_list = []
 
     try:
         print(f"🎬 Playing {episodes} episodes...\n")
 
-        for episode in tqdm(range(1, episodes + 1)):
-
+        for episode in tqdm(range(1, episodes + 1), desc="Playing"):
             state = game.reset()
             done = False
             steps = 0
 
             while not done:
+                # Agent selects action
                 action = agent_obj.get_action(state)
 
+                # Execute action
                 _, done, score = game.step(action)
                 next_state = game.get_state()
 
                 state = next_state
                 steps += 1
 
+                # Render
                 stats = {
                     "episode": episode,
                     "record": max(scores) if scores else 0,
@@ -99,18 +127,21 @@ def play(
             scores.append(score)
             steps_list.append(steps)
 
+            # Pause between episodes
             if episode < episodes:
                 time.sleep(1.0)
 
     except KeyboardInterrupt:
-        print("\n\n⚠️  Evaluation interrupted by user")
+        print("\n\n⚠️  Playback interrupted by user")
 
     finally:
-        renderer.close()
+        if ui == "pygame":
+            renderer.close()  # type: ignore
 
+    # Print summary
     if scores:
         print("\n" + "=" * 60)
-        print("📊 Evaluation Summary")
+        print("📊 Performance Summary")
         print("=" * 60)
         print(f"Episodes Played:  {len(scores)}")
         print(f"Average Score:    {sum(scores)/len(scores):.2f} apples")
@@ -118,6 +149,7 @@ def play(
         print(f"Worst Score:      {min(scores)} apples")
         print(f"Average Steps:    {sum(steps_list)/len(steps_list):.1f}")
 
+        # Efficiency metric
         efficient_episodes = [
             steps_list[i] / scores[i] for i in range(len(scores)) if scores[i] > 0
         ]
@@ -129,11 +161,13 @@ def play(
         print("=" * 60 + "\n")
 
 
-GRID_SIZES = {
+# Default grid sizes for each agent type
+DEFAULT_GRID_SIZES = {
     "tabular": 5,
     "dqn": 10,
     "ppo": 20,
 }
+
 
 if __name__ == "__main__":
     play()
