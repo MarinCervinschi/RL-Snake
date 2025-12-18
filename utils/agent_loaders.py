@@ -79,24 +79,27 @@ class ConvQNetwork(nn.Module):
 
         self.conv = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, padding=1),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.Tanh(),
+            nn.ReLU(),
         )
 
         self.flat_size = 64 * grid_size * grid_size
+
         self.fc = nn.Sequential(
-            nn.Linear(self.flat_size, 512),
-            nn.Tanh(),
-            nn.Linear(512, num_actions),
+            nn.Linear(self.flat_size, 256),
+            nn.ReLU(),
+            nn.Linear(256, num_actions),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass."""
         features = self.conv(x)
         flat = features.view(features.size(0), -1)
-        return self.fc(flat)
+        q_values = self.fc(flat)
+        return q_values
 
 
 class DQNAgent:

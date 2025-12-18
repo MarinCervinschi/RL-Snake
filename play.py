@@ -77,7 +77,7 @@ def play(
     except FileNotFoundError as e:
         print(f"\n❌ Error: {e}")
         print(f"\n💡 Train the agent first using the notebook:")
-        print(f"   notebooks/train_{agent}.ipynb")
+        print(f"   notebooks/{agent}_agent.ipynb")
         return
 
     # Create game environment
