@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from core.interfaces import IAgent
 from game.entities import Action, State
 
 
@@ -78,7 +77,7 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
-class DQNAgent(IAgent):
+class DQNAgent:
     """
     DQN Agent tuned for Snake on a 10x10 grid.
 
@@ -92,7 +91,7 @@ class DQNAgent(IAgent):
     def __init__(
         self,
         grid_size: int = 10,
-        learning_rate: float = 1e-4,
+        learning_rate: float = 0.0001,
         discount_factor: float = 0.99,
         epsilon_start: float = 1.0,
         epsilon_end: float = 0.1,
@@ -102,7 +101,7 @@ class DQNAgent(IAgent):
         target_update_freq: int = 1_000,
         warmup_steps: int = 20_000,
     ):
-        super().__init__(grid_size)
+        self.grid_size = grid_size
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"🖥️  Using device: {self.device}")
@@ -135,7 +134,7 @@ class DQNAgent(IAgent):
         self.episodes_trained = 0
         self.losses: List[float] = []
 
-        #self.load()
+        # self.load()
 
     def get_action(self, state: State) -> Action:
         # Warmup: pure exploration
@@ -150,7 +149,9 @@ class DQNAgent(IAgent):
             q_values = self.q_network(state_t)
         return Action(q_values.argmax().item())
 
-    def train(self, state: State, action: Action, reward: float, next_state: State, done: bool):
+    def train(
+        self, state: State, action: Action, reward: float, next_state: State, done: bool
+    ):
         state_arr = state.to_tensor()
         next_state_arr = next_state.to_tensor()
 
@@ -159,7 +160,9 @@ class DQNAgent(IAgent):
         if len(self.memory) < self.batch_size:
             return
 
-        states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
+        states, actions, rewards, next_states, dones = self.memory.sample(
+            self.batch_size
+        )
 
         states_t = torch.tensor(states, device=self.device)
         actions_t = torch.tensor(actions, device=self.device)
@@ -219,7 +222,6 @@ class DQNAgent(IAgent):
         print(f"   Steps: {self.steps:,}")
         print(f"   Current epsilon: {self.epsilon:.4f}")
         print(f"   Replay buffer: {len(self.memory):,} transitions")
-
 
     def load(self, filepath: str = "models/dqn_snake_10x10.pkl"):
         path = Path(filepath)

@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from core.interfaces import IAgent
 from game.entities import Action, State
 
 
@@ -158,7 +157,7 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
-class DQNAgent(IAgent):
+class DQNAgent():
     """
     Deep Q-Network agent with experience replay and target network.
 
@@ -195,7 +194,7 @@ class DQNAgent(IAgent):
             buffer_size: Capacity of replay buffer
             target_update_freq: Steps between target network updates
         """
-        super().__init__(grid_size)
+        self.grid_size = grid_size
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.epsilon = epsilon
