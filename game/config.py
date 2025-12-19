@@ -52,7 +52,7 @@ class GameConfig:
     @property
     def max_capacity(self) -> int:
         """Total number of cells in the grid."""
-        return self.grid_size * self.grid_size
+        return int((self.grid_size * self.grid_size) * 0.7) # 70% of grid
 
     def get_milestone_length(self, ratio: float) -> int:
         """Calculate exact snake length required for a milestone."""
