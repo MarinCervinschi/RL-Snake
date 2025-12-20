@@ -10,10 +10,10 @@ class GameConfig:
 
     reward_food: float = 10.0
     reward_collision: float = -10.0
-    reward_step: float = -0.01
+    reward_step: float = 0.0
 
     reward_win: float = 1000.0
-    reward_timeout: float = -1.0
+    reward_timeout: float = -5.0
 
     # Level 1: "Human Competence" (~30% of map)
     milestone_expert_ratio: float = 0.3
@@ -52,7 +52,7 @@ class GameConfig:
     @property
     def max_capacity(self) -> int:
         """Total number of cells in the grid."""
-        return int((self.grid_size * self.grid_size) * 0.7) # 70% of grid
+        return int((self.grid_size * self.grid_size) * 0.7)  # 70% of grid
 
     def get_milestone_length(self, ratio: float) -> int:
         """Calculate exact snake length required for a milestone."""
