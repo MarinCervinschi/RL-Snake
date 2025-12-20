@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class GameConfig:
     """Configuration for Snake game with Reward Shaping and Milestones."""
 
-    grid_size: int = 20
+    grid_size: int = 10
     initial_snake_length: int = 3
 
     reward_food: float = 10.0

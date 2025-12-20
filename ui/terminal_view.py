@@ -1,6 +1,8 @@
 import time
 from typing import Optional
+
 from IPython.display import clear_output
+
 from game.entities import Point
 
 
