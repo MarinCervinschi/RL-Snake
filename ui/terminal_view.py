@@ -1,15 +1,13 @@
-import os
-import platform
 import time
 from typing import Optional
-
+from IPython.display import clear_output
 from game.entities import Point
 
 
 class TerminalRenderer:
-    def __init__(self, width: int, height: int, speed: float = 0.1):
-        self.width = width
-        self.height = height
+    def __init__(self, grid_size: int, speed: float = 0.1):
+        self.width = grid_size
+        self.height = grid_size
         self.speed = speed  # Delay in seconds (to make it watchable)
         self.chars = {
             "EMPTY": " . ",
@@ -19,7 +17,7 @@ class TerminalRenderer:
         }
 
     def render(
-        self, snake: list, food: Optional[Point], score: int, record: dict
+        self, snake: list, food: Optional[Point], score: int, record: int
     ) -> None:
         """
         Draws the game state to the terminal.
@@ -42,15 +40,12 @@ class TerminalRenderer:
             else:
                 char = self.chars["SNAKE_BODY"]
 
-            # Safety check to ensure we don't crash drawing if snake is out of bounds (during debug)
             if 0 <= point.y < self.height and 0 <= point.x < self.width:
                 grid[point.y][point.x] = char
 
-        command = "cls" if platform.system() == "Windows" else "clear"
-        os.system(command)
+        clear_output(wait=True)
 
-        print(f"--- GENERATION: {record['episode']} ---")
-        print(f"SCORE: {score} | HIGH SCORE: {record['record']}")
+        print(f"SCORE: {score} | HIGH SCORE: {record}")
         print("-" * (self.width * 3))
 
         for row in grid:
