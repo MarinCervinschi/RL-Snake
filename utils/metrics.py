@@ -27,11 +27,22 @@ class TrainingMetrics:
         self.rewards: List[float] = []
 
         # Derived metrics
-        self.steps_per_apple: List[float] = []
         self.moving_avg_scores: List[float] = []
 
+    @property
+    def record(self) -> int:
+        """Highest score achieved."""
+        return max(self.scores) if self.scores else 0
+
+    def reset(self) -> None:
+        """Reset all recorded metrics."""
+        self.episodes.clear()
+        self.scores.clear()
+        self.rewards.clear()
+        self.moving_avg_scores.clear()
+
     def record_episode(
-        self, episode: int, score: int, steps: int, total_reward: Optional[float] = None
+        self, episode: int, score: int, total_reward: Optional[float] = None
     ) -> None:
         """
         Record metrics for a completed episode.
@@ -48,14 +59,6 @@ class TrainingMetrics:
         if total_reward is not None:
             self.rewards.append(total_reward)
 
-        # Calculate efficiency (steps per apple)
-        if score > 0:
-            efficiency = steps / score
-        else:
-            efficiency = 0.0  # Or could use steps as penalty
-        self.steps_per_apple.append(efficiency)
-
-        # Calculate moving average (window=100)
         if len(self.scores) >= 100:
             moving_avg = np.mean(self.scores[-100:])
         else:
@@ -80,26 +83,6 @@ class TrainingMetrics:
         recent = self.scores[-window:]
         return float(np.mean(recent))
 
-    def get_recent_average_efficiency(self, window: int = 100) -> float:
-        """
-        Get average efficiency over recent episodes.
-
-        Args:
-            window: Number of recent episodes to average
-
-        Returns:
-            Average steps per apple
-        """
-        if not self.steps_per_apple:
-            return 0.0
-
-        # Filter out zero-score episodes
-        non_zero = [eff for eff in self.steps_per_apple[-window:] if eff > 0]
-        if not non_zero:
-            return 0.0
-
-        return float(np.mean(non_zero))
-
     def plot(self, show: bool = True, save: bool = True) -> None:
         """
         Generate and optionally display/save training plots.
@@ -111,16 +94,12 @@ class TrainingMetrics:
         if not self.episodes:
             print("⚠️  No data to plot")
             return
-        
+
         print("📈 Generating training plots...")
 
-
-        # Create figure with 2 subplots in a single row
-        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        fig, ax1 = plt.subplots(1, 1, figsize=(6, 5))
         fig.suptitle("Training Metrics", fontsize=16, fontweight="bold")
 
-        # Plot 1: Score over time
-        ax1 = axes[0]
         ax1.plot(self.episodes, self.scores, alpha=0.3, color="blue", label="Raw Score")
 
         if len(self.scores) > 50:
@@ -140,50 +119,6 @@ class TrainingMetrics:
         ax1.set_title("Learning Curve")
         ax1.legend()
         ax1.grid(True, alpha=0.3)
-
-        # Plot 2: Efficiency (steps per apple)
-        ax2 = axes[1]
-
-        # Filter out zero-score episodes for efficiency plot
-        valid_indices = [i for i, s in enumerate(self.scores) if s > 0]
-        if valid_indices:
-            valid_episodes = [self.episodes[i] for i in valid_indices]
-            valid_efficiency = [self.steps_per_apple[i] for i in valid_indices]
-
-            ax2.plot(
-                valid_episodes,
-                valid_efficiency,
-                alpha=0.3,
-                color="orange",
-                label="Steps/Apple",
-            )
-
-            if len(valid_efficiency) > 50:
-                window = min(50, len(valid_efficiency) // 10)
-                moving_avg = self._moving_average(valid_efficiency, window)
-                ax2.plot(
-                    valid_episodes,
-                    moving_avg,
-                    color="darkorange",
-                    linewidth=2,
-                    label=f"Avg ({window} ep)",
-                )
-
-            ax2.set_xlabel("Episode")
-            ax2.set_ylabel("Steps per Apple")
-            ax2.set_title("Pathfinding Efficiency")
-            ax2.legend()
-            ax2.grid(True, alpha=0.3)
-        else:
-            ax2.text(
-                0.5,
-                0.5,
-                "No successful episodes yet",
-                ha="center",
-                va="center",
-                transform=ax2.transAxes,
-            )
-            ax2.set_title("Pathfinding Efficiency")
 
         plt.tight_layout()
 
@@ -216,28 +151,24 @@ class TrainingMetrics:
             return np.array(data)
         return np.convolve(data, np.ones(window) / window, mode="same")
 
-    def print_summary(self) -> None:
+    def print_summary(self, play: bool = False) -> None:
         """Print summary statistics."""
         if not self.scores:
             print("No metrics recorded yet")
             return
 
         print("\n" + "=" * 50)
-        print("📊 Training Summary")
+        print("📊 Training Summary" if not play else "📊 Playback Summary")
         print("=" * 50)
         print(f"Total Episodes:     {len(self.episodes)}")
-        print(
-            f"Average Score:      {np.mean(self.scores):.2f} ± {np.std(self.scores):.2f}"
-        )
         print(f"Best Score:         {max(self.scores)}")
-        print(f"Worst Score:        {min(self.scores)}")
-        print(f"Recent Avg (100):   {self.get_recent_average_score(100):.2f}")
+        if not play:
+            print(f"Recent Avg (100):   {self.get_recent_average_score(100):.2f}")
+        else:
+            print(f"Worst Score:        {min(self.scores)}")
+            print(f"Avg Score:          {np.mean(self.scores):.2f}")
 
-        non_zero_eff = [e for e in self.steps_per_apple if e > 0]
-        if non_zero_eff:
-            print(f"Avg Efficiency:     {np.mean(non_zero_eff):.1f} steps/apple")
-
-        if self.rewards:
+        if self.rewards and not play:
             print(f"Avg Total Reward:   {np.mean(self.rewards):.2f}")
 
         print("=" * 50 + "\n")
