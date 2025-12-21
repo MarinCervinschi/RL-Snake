@@ -10,7 +10,7 @@ class TrainingMetrics:
     Tracks and visualizes training metrics.
     """
 
-    def __init__(self, save_dir: str = "results"):
+    def __init__(self, save_dir: str = "plots"):
         """
         Initialize metrics tracker.
 
@@ -26,6 +26,8 @@ class TrainingMetrics:
         self.scores: List[int] = []
         self.rewards: List[float] = []
 
+        self.epsilons: List[float] = []
+
         # Derived metrics
         self.moving_avg_scores: List[float] = []
 
@@ -40,9 +42,14 @@ class TrainingMetrics:
         self.scores.clear()
         self.rewards.clear()
         self.moving_avg_scores.clear()
+        self.epsilons.clear()
 
     def record_episode(
-        self, episode: int, score: int, total_reward: Optional[float] = None
+        self,
+        episode: int,
+        score: int,
+        total_reward: Optional[float] = None,
+        epsilon: Optional[float] = None,
     ) -> None:
         """
         Record metrics for a completed episode.
@@ -52,12 +59,16 @@ class TrainingMetrics:
             score: Number of apples eaten
             steps: Number of steps taken
             total_reward: Total reward accumulated (optional)
+            epsilon: Epsilon value (optional)
         """
         self.episodes.append(episode)
         self.scores.append(score)
 
         if total_reward is not None:
             self.rewards.append(total_reward)
+
+        if epsilon is not None:
+            self.epsilons.append(epsilon)
 
         if len(self.scores) >= 100:
             moving_avg = np.mean(self.scores[-100:])
@@ -90,6 +101,7 @@ class TrainingMetrics:
         Args:
             show: Whether to display plots
             save: Whether to save plots to disk
+            plot_epsilon: Whether to plot epsilon decay (if tracked)
         """
         if not self.episodes:
             print("⚠️  No data to plot")
@@ -97,44 +109,93 @@ class TrainingMetrics:
 
         print("📈 Generating training plots...")
 
-        fig, ax1 = plt.subplots(1, 1, figsize=(6, 5))
-        fig.suptitle("Training Metrics", fontsize=16, fontweight="bold")
+        if self.epsilons:
 
-        ax1.plot(self.episodes, self.scores, alpha=0.3, color="blue", label="Raw Score")
-
-        if len(self.scores) > 50:
-            # Moving average
-            window = min(50, len(self.scores) // 10)
-            moving_avg = self._moving_average(self.scores, window)
-            ax1.plot(
-                self.episodes,
-                moving_avg,
-                color="darkblue",
-                linewidth=2,
-                label=f"Avg ({window} ep)",
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5), sharey=False)
+            fig.suptitle(
+                "Training Metrics & Epsilon Decay", fontsize=16, fontweight="bold"
             )
 
-        ax1.set_xlabel("Episode")
-        ax1.set_ylabel("Score (Apples)")
-        ax1.set_title("Learning Curve")
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
+            # Score plot
+            ax1.plot(
+                self.episodes, self.scores, alpha=0.3, color="blue", label="Raw Score"
+            )
+            if len(self.scores) > 50:
+                window = min(50, len(self.scores) // 10)
+                moving_avg = self._moving_average(self.scores, window)
+                ax1.plot(
+                    self.episodes,
+                    moving_avg,
+                    color="darkblue",
+                    linewidth=2,
+                    label=f"Avg ({window} ep)",
+                )
+            ax1.set_xlabel("Episode")
+            ax1.set_ylabel("Score (Apples)")
+            ax1.set_title("Learning Curve")
+            ax1.legend()
+            ax1.grid(True, alpha=0.3)
 
-        plt.tight_layout()
+            # Epsilon plot
+            ax2.plot(
+                self.episodes[: len(self.epsilons)],
+                self.epsilons,
+                color="orange",
+                label="Epsilon",
+            )
+            ax2.set_xlabel("Episode")
+            ax2.set_ylabel("Epsilon")
+            ax2.set_title("Epsilon Decay")
+            ax2.legend()
+            ax2.grid(True, alpha=0.3)
 
-        # Save to file
-        if save:
-            self.save_dir.mkdir(parents=True, exist_ok=True)
-            plot_path = self.save_dir / "training_metrics.png"
-            plt.savefig(plot_path, dpi=150, bbox_inches="tight")
-            print(f"📊 Plot saved to: {plot_path}")
+            plt.tight_layout(rect=(0, 0, 1, 0.97))
 
-        # Display
-        if show:
-            plt.show(block=False)
-            plt.pause(0.1)
+            # Save to file
+            if save:
+                self.save_dir.mkdir(parents=True, exist_ok=True)
+                plot_path = self.save_dir / "training_metrics.png"
+                plt.savefig(plot_path, dpi=150, bbox_inches="tight")
+                print(f"📊 Plot saved to: {plot_path}")
+
+            # Display
+            if show:
+                plt.show(block=False)
+                plt.pause(0.1)
+            else:
+                plt.close()
         else:
-            plt.close()
+            fig, ax1 = plt.subplots(1, 1, figsize=(6, 5))
+            fig.suptitle("Training Metrics", fontsize=16, fontweight="bold")
+            ax1.plot(
+                self.episodes, self.scores, alpha=0.3, color="blue", label="Raw Score"
+            )
+            if len(self.scores) > 50:
+                window = min(50, len(self.scores) // 10)
+                moving_avg = self._moving_average(self.scores, window)
+                ax1.plot(
+                    self.episodes,
+                    moving_avg,
+                    color="darkblue",
+                    linewidth=2,
+                    label=f"Avg ({window} ep)",
+                )
+            ax1.set_xlabel("Episode")
+            ax1.set_ylabel("Score (Apples)")
+            ax1.set_title("Learning Curve")
+            ax1.legend()
+            ax1.grid(True, alpha=0.3)
+            plt.tight_layout()
+            if save:
+                self.save_dir.mkdir(parents=True, exist_ok=True)
+                plot_path = self.save_dir / "training_metrics.png"
+                plt.savefig(plot_path, dpi=150, bbox_inches="tight")
+                print(f"📊 Plot saved to: {plot_path}")
+            if show:
+                plt.show(block=False)
+                plt.pause(0.1)
+            else:
+                plt.close()
 
     def _moving_average(self, data: List[float] | List[int], window: int) -> np.ndarray:
         """
