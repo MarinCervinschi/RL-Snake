@@ -1,571 +1,644 @@
 # Deep Q-Network (DQN) with CNN for Snake Game
 
 > **Prerequisites:** 
-> 1. Read the [Complete MDP Formulation](mdp_full_formulation.md) to understand the problem
-> 2. Read [Tabular Q-Learning](tabular_q_learning.md) to understand Q-Learning basics and why tabular methods fail
+> 1. Read the [Complete MDP Formulation](mdp.md) to understand the problem structure
+> 2. Understand basic reinforcement learning concepts (Q-Learning, value functions)
 
 ## Overview
 
-**Deep Q-Network (DQN)** is a breakthrough algorithm that replaces the Q-table with a **neural network**. Instead of storing Q-values for every state-action pair, DQN learns a function $Q_\theta(s, a)$ that approximates Q-values for any state, including those never seen before.
+**Deep Q-Network (DQN)** replaces traditional Q-tables with a **neural network** that can generalize across similar states. Instead of storing Q-values for every possible state (impossible for our 10×10 grid with ~10^10 states), DQN learns a function $Q_\theta(s, a)$ that estimates Q-values for any state.
 
-**Key Innovation:** By using **function approximation**, DQN can generalize across similar states and handle state spaces that are too large for tabular methods.
+**Key Innovation:** By using a **Convolutional Neural Network (CNN)**, DQN exploits the spatial structure of the grid to learn meaningful patterns and strategies.
 
-**For Snake:** We use a **Convolutional Neural Network (CNN)** architecture to exploit the spatial structure of the grid state.
+**Our Implementation:** We use DQN with experience replay and target networks to train an agent that can navigate the Snake game efficiently on a 10×10 grid.
 
-## From Tables to Functions
+---
 
-### The Fundamental Shift
+## Why Neural Networks for Snake?
 
-**Tabular Q-Learning:**
+### The Problem with Tables
+
+**Tabular Q-Learning** requires storing a Q-value for every state-action pair:
+
 ```
-State 42 → Look up row 42 in table → Get [Q(s,UP), Q(s,RIGHT), Q(s,DOWN), Q(s,LEFT)]
+State 1: [Q(s₁,UP), Q(s₁,RIGHT), Q(s₁,DOWN), Q(s₁,LEFT)]
+State 2: [Q(s₂,UP), Q(s₂,RIGHT), Q(s₂,DOWN), Q(s₂,LEFT)]
+...
+State 10,000,000,000: [Q(s_n,UP), Q(s_n,RIGHT), Q(s_n,DOWN), Q(s_n,LEFT)]
 ```
-- Each state has its own independent entry
-- No relationship between similar states
-- Memory: O(|S| × |A|)
 
-**Deep Q-Learning:**
+**Problems:**
+- **Memory explosion:** 10×10 grid ≈ 10^10 states × 4 actions × 8 bytes = 320 GB
+- **Sample inefficiency:** Must visit each state multiple times
+- **No generalization:** Learning about state A doesn't help with similar state B
+
+### The Neural Network Solution
+
+**DQN** uses a single network with shared parameters:
+
 ```
-State 42 → Pass through neural network → Compute [Q(s,UP), Q(s,RIGHT), Q(s,DOWN), Q(s,LEFT)]
+Any State → CNN → [Q(s,UP), Q(s,RIGHT), Q(s,DOWN), Q(s,LEFT)]
 ```
-- All states share the same network weights
-- Similar states produce similar Q-values (generalization)
-- Memory: O(parameters) ~ constant
 
-### Mathematical Formulation
+**Advantages:**
+- ✅ **Compact:** ~3.3M parameters ≈ 13 MB
+- ✅ **Generalizes:** Similar states produce similar Q-values
+- ✅ **Sample efficient:** One update affects all similar states
+- ✅ **Scalable:** Same network works for 10×10, 20×20, or larger grids
 
-**Tabular:** $Q: \mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$ (lookup table)
+---
 
-**DQN:** $Q_\theta: \mathcal{S} \rightarrow \mathbb{R}^{|\mathcal{A}|}$ (neural network with parameters $\theta$)
+## CNN Architecture
 
-The network takes a state as input and outputs Q-values for all actions simultaneously.
+### Input: 4-Channel Grid State
 
-## CNN Architecture for Grid States
+Our state representation is a 4-channel grid of size (H, W, 4):
 
-### Why CNNs for Snake?
+**Channel 0 - Snake Head:**
+```
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[0, 0, 0, 0, 0, 1, 0, 0, 0, 0]  ← Head at (5,2)
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+...
+```
 
-Grid-based games have **spatial structure**:
-- Nearby cells are related (e.g., wall nearby means danger)
-- Patterns repeat across the grid (e.g., "food to the right" looks similar regardless of absolute position)
-- Local features matter (e.g., 3×3 neighborhood around head)
+**Channel 1 - Snake Body (Gradient):**
+```
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[0, 0, 0, 0, 1.0, 0, 0, 0, 0, 0]  ← Neck (1.0)
+[0, 0, 0, 0, 0.67, 0, 0, 0, 0, 0] ← Middle
+[0, 0, 0, 0, 0.33, 0, 0, 0, 0, 0] ← Tail (approaching 0)
+...
+```
 
-**Convolutional Neural Networks** are designed to exploit these properties through:
-1. **Local receptive fields:** Each neuron looks at a small patch
-2. **Weight sharing:** Same filters applied across the grid
-3. **Translation invariance:** Pattern learned at position (5,5) transfers to (10,10)
+**Channel 2 - Food:**
+```
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+[0, 0, 0, 0, 0, 0, 0, 0, 1, 0]  ← Food at (8,1)
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+...
+```
+
+**Channel 3 - Time (Global Urgency):**
+```
+[0.4, 0.4, 0.4, 0.4, 0.4, ...]  ← All cells = 0.4
+[0.4, 0.4, 0.4, 0.4, 0.4, ...]  ← (40% toward timeout)
+[0.4, 0.4, 0.4, 0.4, 0.4, ...]
+...
+```
 
 ### Network Architecture
 
-Our DQN uses a 3-layer CNN followed by fully-connected layers:
-
 ```
-Input: Grid State (3 × H × W)
+Input: (4, 10, 10) tensor
          ↓
-    Conv2D (3→32, kernel=3×3, padding=1)
+    Conv2D(4→32, kernel=3×3, padding=1)
          ↓
-      Tanh Activation
+      ReLU Activation
          ↓
-    Conv2D (32→64, kernel=3×3, padding=1)
+    Conv2D(32→64, kernel=3×3, padding=1)
          ↓
-      Tanh Activation
+      ReLU Activation
          ↓
-    Conv2D (64→64, kernel=3×3, padding=1)
+    Conv2D(64→64, kernel=3×3, padding=1)
          ↓
-      Tanh Activation
+      ReLU Activation
          ↓
-    Flatten (64 × H × W)
+    Flatten (64 × 10 × 10 = 6,400)
          ↓
-    Linear (64×H×W → 512)
+    Linear (6,400 → 256)
          ↓
-      Tanh Activation
+      ReLU Activation
          ↓
-    Linear (512 → 4)  [Output: Q-values]
+    Linear (256 → 4)
+         ↓
+    Output: [Q(UP), Q(RIGHT), Q(DOWN), Q(LEFT)]
 ```
 
-### Layer-by-Layer Breakdown
+### Layer-by-Layer Explanation
 
-**Input Layer: (3, H, W)**
-- Channel 0: Snake head positions (1.0 at head, 0.0 elsewhere)
-- Channel 1: Snake body positions (1.0 at body, 0.0 elsewhere)
-- Channel 2: Food position (1.0 at food, 0.0 elsewhere)
+**Convolutional Layers (3 layers):**
+- **Purpose:** Extract spatial features from the grid
+- **Kernel size 3×3:** Looks at 3×3 neighborhoods
+- **Padding=1:** Preserves spatial dimensions (output same size as input)
+- **Layer 1 (4→32):** Learns basic patterns ("food nearby", "wall ahead")
+- **Layer 2 (32→64):** Combines basic features into mid-level concepts
+- **Layer 3 (64→64):** High-level strategic features
 
-**Conv Layer 1: 3 → 32 channels**
-- Kernel size: 3×3 (looks at 3×3 neighborhoods)
-- Padding: 1 (preserves spatial dimensions)
-- Output: (32, H, W)
-- **Learns:** Basic features like "head near food", "body nearby", "wall ahead"
+**Fully Connected Layers (2 layers):**
+- **FC1 (6,400→256):** Aggregates spatial information into abstract features
+- **FC2 (256→4):** Maps to Q-values for each action
 
-**Conv Layer 2: 32 → 64 channels**
-- Output: (64, H, W)
-- **Learns:** Mid-level features combining basic patterns
-
-**Conv Layer 3: 64 → 64 channels**
-- Output: (64, H, W)
-- **Learns:** High-level spatial strategies
-
-**Fully Connected Layer 1: (64×H×W) → 512**
-- Flattens spatial dimensions
-- **Learns:** Global decision-making from local features
-
-**Output Layer: 512 → 4**
-- Produces Q(s, UP), Q(s, RIGHT), Q(s, DOWN), Q(s, LEFT)
-- No activation (raw Q-values, can be positive or negative)
-
-### Why Tanh Activation?
-
-We use **Tanh** instead of ReLU for the following reasons:
-
-**Mathematical Form:**
-$$\text{Tanh}(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} = \frac{e^{2x} - 1}{e^{2x} + 1}$$
-
-Output range: $[-1, 1]$
-
-**Advantages for Snake:**
-
-1. **Bounded Outputs:** Tanh outputs are naturally bounded, preventing explosive activations
-   - ReLU: $[0, \infty)$ → Can grow unbounded
-   - Tanh: $[-1, 1]$ → Always bounded
-
-2. **Zero-Centered:** Tanh is centered around 0, which helps with learning
-   - Negative Q-values (bad states) map naturally to negative activations
-   - Positive Q-values (good states) map to positive activations
-
-3. **Smooth Gradients:** Tanh provides gradients in both positive and negative directions
-   - ReLU: Gradient is 0 for negative inputs (dead neurons)
-   - Tanh: Gradient exists everywhere except at extremes
-
-4. **Better for Grid Representations:** Our input values are binary (0 or 1), and Tanh handles this range well
-
-**Comparison:**
-
-| Activation | Range | Dead Neurons? | Zero-Centered? | Best For |
-|------------|-------|---------------|----------------|----------|
-| ReLU | $[0, \infty)$ | Yes (negative inputs) | No | Very deep networks, images |
-| Tanh | $[-1, 1]$ | Rare (saturated extremes) | Yes | Grid games, bounded inputs |
+**Activation Functions:**
+- **ReLU:** $f(x) = \max(0, x)$ - Introduces non-linearity
+- **No activation on output:** Q-values can be positive or negative
 
 ### Parameter Count
 
 For a 10×10 grid:
 
 ```
-Conv1: (3 × 3 × 3 × 32) + 32 = 896 parameters
-Conv2: (3 × 3 × 32 × 64) + 64 = 18,496 parameters
-Conv3: (3 × 3 × 64 × 64) + 64 = 36,928 parameters
-FC1:   (64 × 10 × 10 × 512) + 512 = 3,277,312 parameters
-FC2:   (512 × 4) + 4 = 2,052 parameters
-────────────────────────────────────────────────
-Total: ~3.3 million parameters
+Conv1: (3×3×4×32) + 32 bias = 1,184
+Conv2: (3×3×32×64) + 64 bias = 18,496
+Conv3: (3×3×64×64) + 64 bias = 36,928
+FC1: (6,400×256) + 256 bias = 1,638,656
+FC2: (256×4) + 4 bias = 1,028
+────────────────────────────────────
+Total: ~1.7 million parameters ≈ 6.8 MB
 ```
 
-**Note:** Most parameters are in the first fully-connected layer. This is typical for CNN architectures transitioning from spatial to decision layers.
+**Note:** Most parameters are in FC1, which connects the spatial features to the decision-making layer.
 
-## The Three Key Innovations of DQN
+---
 
-DQN introduced three critical techniques to stabilize neural network training for Q-Learning:
+## The Three Key DQN Innovations
 
 ### 1. Experience Replay
 
-**Problem:** Training on consecutive game steps leads to:
-- **High correlation:** States at time $t$ and $t+1$ are very similar
-- **Catastrophic forgetting:** New experiences overwrite old knowledge
-- **Sample inefficiency:** Each experience used only once
+**Problem:** Training on consecutive game frames leads to:
+- High correlation (state at step t is very similar to step t+1)
+- Catastrophic forgetting (new experiences overwrite old knowledge)
+- Sample inefficiency (each experience used only once)
 
-**Solution:** Store experiences in a **replay buffer** and sample randomly.
+**Solution:** Store experiences in a replay buffer and sample randomly.
 
-**Replay Buffer Structure:**
+**Implementation:**
 ```python
-buffer = deque(maxlen=100_000)  # Fixed-size FIFO queue
+# Replay Buffer: Fixed-size FIFO queue
+buffer = deque(maxlen=200_000)
 
-# Store transitions
+# During gameplay:
 buffer.append((state, action, reward, next_state, done))
 
-# Sample random batch for training
-batch = random.sample(buffer, batch_size=64)
+# During training:
+batch = random.sample(buffer, batch_size=64)  # Random sampling
 ```
 
-**Training Process:**
-1. Play game, store transition $(s, a, r, s', \text{done})$ in buffer
-2. Sample random batch of 64 transitions from buffer
-3. Compute loss using batch
-4. Update network weights
-
 **Benefits:**
-- ✅ Breaks temporal correlation (random sampling)
-- ✅ Reuses experiences multiple times (sample efficiency)
-- ✅ Stabilizes training (diverse batch composition)
+- ✅ Breaks temporal correlation (random sampling decorrelates data)
+- ✅ Reuses experiences efficiently (each experience used multiple times)
+- ✅ Stabilizes training (diverse batches reduce variance)
 
-**Memory Cost:** 100,000 transitions × ~50 bytes/transition ≈ 5 MB
+**Buffer Capacity:** 200,000 transitions ≈ 2,000-3,000 episodes worth of experience
 
 ### 2. Target Network
 
-**Problem:** When computing the TD target, we use the network we're training:
+**Problem:** When computing the TD target, we use the same network we're training:
 
 $$\text{Target} = r + \gamma \max_{a'} Q_\theta(s', a')$$
 
 But $Q_\theta$ is constantly changing! This creates a **moving target problem:**
-- Update network → Target changes → Update again → Target changes more → Instability
+- Update Q-values → Targets change → Update again → Targets change more → Instability
 
-**Solution:** Use a **separate target network** $Q_{\theta^-}$ that updates slowly.
+**Solution:** Use a separate **target network** $Q_{\theta^-}$ that updates slowly.
 
-**Two Networks:**
+**Implementation:**
 ```python
-q_network = QNetwork()        # Updated every step (fast)
-target_network = QNetwork()   # Updated every 1000 steps (slow)
+# Two identical networks
+q_network = ConvQNetwork()        # Updated every training step
+target_network = ConvQNetwork()   # Updated every 1,000 steps
 
 # Initially identical
 target_network.load_state_dict(q_network.state_dict())
-```
 
-**Training with Target Network:**
-```python
-# Compute target using frozen target network
-with torch.no_grad():  # No gradients through target
-    target_q = reward + gamma * target_network(next_state).max()
+# Training: use target network for stable targets
+with torch.no_grad():
+    next_q = target_network(next_state).max()
+    target = reward + gamma * next_q
 
-# Compute current Q from main network
-current_q = q_network(state)[action]
-
-# Loss: squared difference
-loss = (current_q - target_q) ** 2
-```
-
-**Update Schedule:**
-```python
+# Update target network periodically
 if steps % 1000 == 0:
-    target_network.load_state_dict(q_network.state_dict())  # Sync networks
+    target_network.load_state_dict(q_network.state_dict())
 ```
 
 **Benefits:**
-- ✅ Stable targets for 1000 steps
-- ✅ Prevents oscillations
+- ✅ Stable targets for 1,000 steps (no moving target)
+- ✅ Prevents oscillations and divergence
 - ✅ More reliable convergence
 
-**Why 1000 steps?**
-- Too frequent (e.g., every 10 steps): Targets still move too much
-- Too infrequent (e.g., every 10,000 steps): Target becomes stale
-- 1000 steps ≈ 10-20 episodes: Good balance
+**Update Frequency:** Every 1,000 steps ≈ 10-20 episodes
 
-### 3. CNN for Spatial Understanding
+### 3. Double DQN (Action Selection)
 
-**Problem:** Fully-connected networks treat grid cells independently:
-- Cell (5,5) and cell (5,6) have no relationship
-- Network must learn the entire grid structure from scratch
-- Exponential parameter count with grid size
+**Standard DQN Problem:** Can overestimate Q-values due to max operator.
 
-**Solution:** Use CNNs to exploit spatial structure:
-- Convolutional filters detect local patterns
-- Weight sharing across spatial locations
-- Translation invariance (pattern learned once, applies everywhere)
+**Double DQN Solution:** Use online network to **select** action, target network to **evaluate** it:
 
-**Example Learned Features:**
+```python
+# Standard DQN (overestimates):
+next_q = target_network(next_state).max()
 
-*Conv Layer 1 might learn:*
-- Filter 1: Detects "food in 3×3 neighborhood"
-- Filter 2: Detects "body segment above or below"
-- Filter 3: Detects "wall nearby"
+# Double DQN (more accurate):
+next_action = q_network(next_state).argmax()  # Online selects
+next_q = target_network(next_state)[next_action]  # Target evaluates
+```
 
-*Conv Layer 2 might learn:*
-- Filter 10: Combines "food nearby" + "no body blocking" → "clear path to food"
-- Filter 20: Combines "walls on two sides" → "corridor situation"
+**Benefit:** Reduces overestimation bias, leading to more accurate Q-values.
 
-*Conv Layer 3 might learn:*
-- Filter 40: "Trap configuration" (walls + body creating closed space)
-- Filter 50: "Food reachable via curved path"
+---
 
-## The DQN Algorithm
+## Training Algorithm
 
 ### Loss Function
 
-DQN minimizes the **Temporal Difference (TD) error**:
+DQN minimizes the **Mean Squared Bellman Error**:
 
-$$\mathcal{L}(\theta) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{B}} \left[ \left( \underbrace{Q_\theta(s, a)}_{\text{Prediction}} - \underbrace{\left(r + \gamma \max_{a'} Q_{\theta^-}(s', a')\right)}_{\text{Target}} \right)^2 \right]$$
+$$\mathcal{L}(\theta) = \mathbb{E}_{(s,a,r,s',d) \sim \mathcal{B}} \left[ \left( Q_\theta(s, a) - \left(r + \gamma (1-d) \max_{a'} Q_{\theta^-}(s', a')\right) \right)^2 \right]$$
 
 Where:
-- $\mathcal{B}$: Replay buffer (sample distribution)
+- $\mathcal{B}$: Replay buffer (uniformly sampled)
 - $\theta$: Q-network parameters
-- $\theta^-$: Target network parameters (frozen)
+- $\theta^-$: Target network parameters (frozen during optimization)
 - $\gamma = 0.99$: Discount factor
+- $d \in \{0,1\}$: Done flag (1 if terminal state)
 
-**Intuition:** Make the predicted Q-value match what we actually observed (reward + discounted future value).
+**Intuition:** Make predicted Q-value match the observed reward + estimated future value.
 
-### Training Loop (High-Level)
+**Loss Implementation:**
+```python
+# Current Q-values
+current_q = q_network(states).gather(1, actions.unsqueeze(1))
+
+# Target Q-values (no gradient)
+with torch.no_grad():
+    next_actions = q_network(next_states).argmax(1)  # Double DQN
+    next_q = target_network(next_states).gather(1, next_actions.unsqueeze(1))
+    target_q = rewards + (1 - dones) * gamma * next_q
+
+# Smooth L1 Loss (Huber loss)
+loss = nn.SmoothL1Loss()(current_q, target_q)
+```
+
+**Smooth L1 Loss:** More robust to outliers than MSE:
+$$\text{SmoothL1}(x) = \begin{cases}
+0.5x^2 & \text{if } |x| < 1 \\
+|x| - 0.5 & \text{otherwise}
+\end{cases}$$
+
+### Training Loop
 
 ```
-Initialize Q-network with random weights θ
-Initialize target network θ⁻ = θ
-Initialize replay buffer B (capacity 100k)
-Set ε = 1.0 (exploration rate)
+Initialize:
+    Q-network θ with random weights
+    Target network θ⁻ = θ
+    Replay buffer B (capacity 200k)
+    ε = 1.0 (exploration rate)
 
-For episode = 1 to N:
+For episode = 1 to 20,000:
     state = reset_game()
+    episode_reward = 0
     
     While not done:
-        # 1. Select action (ε-greedy)
+        # 1. Action Selection (ε-greedy)
         if random() < ε:
             action = random_action()
         else:
             action = argmax(Q_θ(state))
         
-        # 2. Execute action
+        # 2. Environment Step
         next_state, reward, done = env.step(action)
         
-        # 3. Store transition
+        # 3. Store Transition
         B.push(state, action, reward, next_state, done)
         
-        # 4. Train (if enough samples)
+        # 4. Training (if enough samples)
         if len(B) >= batch_size:
-            batch = B.sample(batch_size)
+            batch = B.sample(batch_size=64)
             
-            # Compute target
-            targets = rewards + γ × max(Q_θ⁻(next_states))
-            
-            # Compute loss
-            predictions = Q_θ(states)[actions]
-            loss = MSE(predictions, targets)
-            
-            # Update Q-network
-            θ ← θ - α∇loss
+            # Compute loss and update
+            loss = compute_loss(batch)
+            optimizer.zero_grad()
+            loss.backward()
+            clip_grad_norm_(θ, max_norm=1.0)
+            optimizer.step()
         
-        # 5. Update target network (periodic)
+        # 5. Update Target Network
         if steps % 1000 == 0:
             θ⁻ ← θ
         
         state = next_state
         steps += 1
     
-    # 6. Decay exploration
-    ε = max(ε × 0.995, 0.01)
+    # 6. Decay Exploration
+    ε = max(ε_min, ε * decay_rate)
 ```
+
+---
 
 ## Hyperparameters
 
+### Core Hyperparameters
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| **Grid Size** | 10×10 | Optimal balance: complex enough to be interesting, small enough to train quickly |
+| **Learning Rate** | 0.0001 | Low rate for stable neural network training (Adam adapts this) |
+| **Discount Factor** | 0.99 | Long-term planning (effective horizon ≈ 460 steps) |
+| **Batch Size** | 64 (CPU) / 128 (GPU) | Balance between gradient quality and update frequency |
+| **Replay Buffer** | 200,000 | Stores 2,000-3,000 episodes worth of diverse experiences |
+| **Target Update** | 1,000 steps | Sync networks every 10-20 episodes for stable targets |
+| **Optimizer** | AdamW | Adaptive learning rate with weight decay |
+
+### Exploration Strategy
+
 | Parameter | Value | Explanation |
 |-----------|-------|-------------|
-| **Learning Rate** | 0.0001 | Low rate for neural networks (Adam optimizer adapts this) |
-| **Discount Factor** | 0.99 | Same as tabular; long-term planning |
-| **Batch Size** | 64 | Standard; balances gradient quality and update frequency |
-| **Replay Buffer Size** | 100,000 | Stores ~1000 episodes of experience |
-| **Target Update Freq** | 1000 steps | Sync target network every 1000 steps |
-| **Initial Epsilon** | 1.0 | Start with full exploration |
-| **Epsilon Decay** | 0.995 | Gradual decay per episode |
-| **Min Epsilon** | 0.01 | Always maintain 1% exploration |
-| **Optimizer** | Adam | Adaptive learning rate, handles sparse gradients well |
+| **Initial ε** | 1.0 | Start with 100% random exploration |
+| **Min ε** | 0.01 | Always maintain 1% exploration (avoid getting stuck) |
+| **Decay** | Linear over 18,000 episodes | Gradual shift from exploration to exploitation |
+| **Learning Starts** | 20,000 steps | Pure random exploration for buffer warmup |
 
-### Why Learning Rate = 0.0001?
+**ε Schedule:**
+```python
+# First 20,000 steps: pure random (warm up buffer)
+if steps < 20_000:
+    ε = 1.0
 
-**Neural networks require much smaller learning rates than tabular methods:**
-- Tabular: α = 0.1 (update individual Q-values)
-- DQN: α = 0.0001 (update millions of parameters that interact)
+# Linear decay over 90% of training
+progress = min(1.0, episodes / (0.9 * total_episodes))
+ε = max(0.01, 1.0 - progress * 0.99)
+```
 
-Too high → Unstable training, divergence  
-Too low → Very slow learning  
-0.0001 with Adam → Good balance
+### Training Duration
 
-### Why Batch Size = 64?
-
-- Smaller (16): Noisy gradients, less stable
-- Larger (256): Smoother gradients, slower updates, more memory
-- 64: Sweet spot (also GPU-efficient as power of 2)
-
-## Expected Behavior by Grid Size
-
-### 10×10 Grid: ✅ Success
-
-**State Space:** ~10^9 states (intractable for tabular)
-
-**Expected Performance:**
-- Episodes to convergence: 2000-3000
-- Final average score: 15-25 apples
-- Training time: 15-20 minutes (CPU)
-
-**Network Behavior:**
-- First 500 episodes: Random exploration, learning basic features
-- Episodes 500-1500: Learns to pursue food, avoid walls
-- Episodes 1500-3000: Refines strategy, handles complex situations
-- After 3000: Stable policy, can navigate efficiently
-
-**Key Observation:** Despite visiting <0.1% of state space, the network generalizes to unseen states.
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| **Total Episodes** | 20,000 | Sufficient for convergence on 10×10 grid |
+| **Expected Convergence** | 5,000-10,000 | When average score plateaus |
+| **Training Time (CPU)** | 30-60 minutes | Depends on CPU speed |
+| **Training Time (GPU)** | 10-20 minutes | GPU accelerates forward/backward passes |
 
 ---
 
-### 20×20 Grid: ✅ Success (More Challenging)
+## Training Dynamics
 
-**State Space:** ~10^40 states (astronomical)
+### Phase 1: Warmup (Episodes 1-1,000)
 
-**Expected Performance:**
-- Episodes to convergence: 5000-8000
-- Final average score: 25-40 apples
-- Training time: 30-45 minutes (CPU)
+**Behavior:**
+- Pure random exploration
+- Filling replay buffer with diverse experiences
+- Network sees all parts of state space
 
-**Network Behavior:**
-- Slower initial learning (larger space to explore)
-- Benefits from CNN's spatial generalization
-- May show more variance in performance
-- Can still learn effective strategy despite massive state space
+**Metrics:**
+- Average score: 1-3 apples
+- ε = 1.0 (100% random)
+- Loss: High and noisy
+
+**What's Happening:**
+- Network learning basic patterns ("don't hit walls immediately")
+- Gradients large as network adjusts to data distribution
+
+### Phase 2: Initial Learning (Episodes 1,000-5,000)
+
+**Behavior:**
+- ε decreasing (more exploitation)
+- Agent starts following food
+- Avoiding obvious collisions
+
+**Metrics:**
+- Average score: 5-10 apples
+- ε: 1.0 → 0.6
+- Loss: Decreasing, stabilizing
+
+**What's Happening:**
+- Network learning: "move toward food", "avoid walls", "don't trap yourself"
+- Q-values becoming more accurate
+- Policy improving rapidly
+
+### Phase 3: Refinement (Episodes 5,000-15,000)
+
+**Behavior:**
+- Strategic navigation
+- Planning around body segments
+- Taking longer paths when necessary
+
+**Metrics:**
+- Average score: 12-20 apples
+- ε: 0.6 → 0.1
+- Loss: Low, stable
+
+**What's Happening:**
+- Network learning complex patterns
+- Handling edge cases
+- Fine-tuning Q-values
+
+### Phase 4: Mastery (Episodes 15,000-20,000)
+
+**Behavior:**
+- Consistent high performance
+- Efficient food collection
+- Rare mistakes
+
+**Metrics:**
+- Average score: 18-25+ apples
+- ε: 0.1 → 0.01
+- Loss: Very stable
+
+**What's Happening:**
+- Near-optimal policy
+- Minimal exploration
+- Exploitation of learned strategy
 
 ---
 
-### Scalability: 30×30+ Grid: ⚠️ Possible
+## Understanding the Learned Features
 
-**With proper tuning:**
-- Larger networks (more filters/layers)
-- More training episodes
-- Potentially GPU acceleration
+### What CNNs Learn
 
-DQN can theoretically handle very large grids because memory is O(parameters), not O(states).
+**Convolutional Layer 1 (Basic Features):**
+- Filter detecting "food in neighborhood"
+- Filter detecting "wall within 2 cells"
+- Filter detecting "body segment blocking path"
+- Filter detecting "open space"
 
-## Advantages of DQN
+**Convolutional Layer 2 (Combinations):**
+- "Clear path to food" (food nearby + no obstacles)
+- "Dangerous corridor" (walls on both sides)
+- "Body creating trap" (body forming closed loop)
 
-### ✅ Generalization
-Similar states produce similar Q-values without explicit storage.
+**Convolutional Layer 3 (Strategic Patterns):**
+- "Safe food collection" (can reach food and escape)
+- "Risky maneuver" (tight space navigation)
+- "Time pressure" (combining spatial + temporal features)
 
-**Example:**
+**Fully Connected Layers (Decision Making):**
+- Aggregating all spatial information
+- Weighing short-term vs. long-term rewards
+- Outputting Q-values based on strategic assessment
+
+### Example Q-Value Interpretation
+
+Given this state:
 ```
-Seen during training: Snake at (5,5), food at (7,5) → Q(RIGHT) = 8.2
-Never seen: Snake at (12,8), food at (14,8) → Q(RIGHT) ≈ 8.0 (generalized!)
+Head: (5, 5)
+Food: (8, 5)  [3 cells to the right]
+Body: blocking below
+Time: 0.3 (moderate urgency)
 ```
 
-### ✅ Scalable Memory
-~3M parameters (~12 MB) work for 10×10, 20×20, even 50×50 grids.
+Q-Network might output:
+```python
+Q(UP) = 2.3      # Neutral, no immediate benefit
+Q(RIGHT) = 8.5   # Highest! Moves toward food
+Q(DOWN) = -5.2   # Negative! Would hit body
+Q(LEFT) = 1.1    # Positive but not optimal
+```
 
-### ✅ Sample Efficient (vs. Tabular)
-Learns from similar states through shared weights. One experience updates the entire network, affecting all states.
+**Action Selected:** RIGHT (highest Q-value)
 
-### ✅ Handles Large State Spaces
-Can operate in state spaces with billions or trillions of states.
+---
 
-### ✅ Continuous Features Possible
-Could handle continuous state features (e.g., exact pixel coordinates) with appropriate input normalization.
-
-## Limitations of DQN
-
-### ❌ Convergence Not Guaranteed
-Unlike tabular Q-Learning, no theoretical guarantee of convergence. Can diverge or oscillate.
-
-### ❌ Sample Inefficient (vs. Modern Methods)
-DQN requires many more samples than policy gradient methods like PPO. Typical: 10^5 - 10^6 steps.
-
-### ❌ Instability Issues
-Without proper tuning, can suffer from:
-- Divergence (Q-values explode)
-- Forgetting (overwrites good policies)
-- Oscillation (performance cycles)
-
-### ❌ Hyperparameter Sensitive
-Requires careful tuning of learning rate, batch size, network architecture, buffer size, etc.
-
-### ❌ Computationally Expensive
-- Neural network forward/backward passes are slow vs. table lookup
-- Training time: minutes to hours vs. seconds for tabular
-
-### ❌ Less Interpretable
-Cannot inspect exact Q-values for a state. Network is a black box.
-
-## Comparison: Tabular vs. DQN
-
-| Aspect | Tabular Q-Learning | DQN |
-|--------|-------------------|-----|
-| **State Representation** | Hash/index | Raw grid tensor |
-| **Q-Value Storage** | Dictionary/array | Neural network |
-| **Memory** | O(\|visited states\|) | O(parameters) ≈ 12 MB |
-| **Grid Size Limit** | ~7×7 | 20×20+ |
-| **Training Time (10×10)** | Never converges | ~15 minutes |
-| **Generalization** | None | Excellent |
-| **Sample Efficiency** | Must revisit each state | Learns from similar states |
-| **Convergence** | Guaranteed (theory) | Not guaranteed |
-| **Interpretability** | High | Low |
-| **Implementation** | Simple | Complex |
-
-## Implementation Considerations
+## Implementation Details
 
 ### Gradient Clipping
 
-To prevent explosive gradients:
+Prevents exploding gradients:
 ```python
 torch.nn.utils.clip_grad_norm_(q_network.parameters(), max_norm=1.0)
 ```
 
+If gradient norm exceeds 1.0, scale it down to 1.0.
+
 ### Weight Initialization
 
-Use **Xavier/Glorot initialization** for Tanh:
+Kaiming initialization for ReLU networks:
 ```python
 for layer in q_network.modules():
-    if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-        nn.init.xavier_uniform_(layer.weight)
+    if isinstance(layer, (nn.Conv2d, nn.Linear)):
+        nn.init.kaiming_uniform_(layer.weight, nonlinearity='relu')
+        if layer.bias is not None:
+            nn.init.constant_(layer.bias, 0)
 ```
 
-### Exploration Strategy
+### Optimizer Configuration
 
-ε-greedy with exponential decay:
-- Start: ε = 1.0 (100% random)
-- Decay: ε ← ε × 0.995 per episode
-- End: ε = 0.01 (1% random, 99% exploitation)
-
-## Common Pitfalls and Solutions
-
-### Pitfall 1: Q-Values Explode
-**Symptom:** Q-values grow to >1000, then NaN
-
-**Solution:**
-- Use target network (prevents moving targets)
-- Clip gradients (max_norm=1.0)
-- Lower learning rate
-
-### Pitfall 2: No Learning After Initial Exploration
-**Symptom:** Performance improves early, then plateaus
-
-**Solution:**
-- Check ε decay (not decaying too fast?)
-- Ensure replay buffer is diverse
-- Try larger buffer or smaller batch size
-
-### Pitfall 3: Performance Oscillates Wildly
-**Symptom:** Good policy suddenly becomes bad, then recovers
-
-**Solution:**
-- Increase target network update frequency (every 500 steps instead of 1000)
-- Reduce learning rate
-- Increase batch size for smoother gradients
-
-### Pitfall 4: Very Slow Training
-**Symptom:** 10,000 episodes, still random performance
-
-**Solution:**
-- Check reward function (is it providing signal?)
-- Increase learning rate (carefully)
-- Verify network architecture (too small? too large?)
-- Check if gradients are flowing (print gradient norms)
-
-## Summary
-
-**DQN with CNN** solves the curse of dimensionality through:
-1. **Function approximation** → Generalizes across states
-2. **Experience replay** → Stabilizes training, improves sample efficiency
-3. **Target network** → Prevents moving target problem
-4. **CNN architecture** → Exploits spatial structure of grid
-
-**For our Snake project:**
-- ✅ Works well on 10×10 grid (where tabular fails)
-- ✅ Scales to 20×20 grid
-- ✅ Demonstrates power of deep RL
-
-**Trade-offs:**
-- More complex to implement and tune
-- Longer training time per step
-- Less interpretable
-- But: handles problems that tabular methods cannot touch
-
-**Next:** See how [Proximal Policy Optimization (PPO)](ppo.md) improves upon DQN with policy gradient methods and often achieves better sample efficiency and stability.
+AdamW with default parameters:
+```python
+optimizer = optim.AdamW(
+    q_network.parameters(),
+    lr=0.0001,
+    betas=(0.9, 0.999),
+    eps=1e-08,
+    weight_decay=0.01
+)
+```
 
 ---
 
-## Key Takeaways
+## Expected Performance
 
-1. **Function approximation enables generalization** - Learn patterns, not individual states
-2. **CNNs are natural for grid games** - Spatial structure maps to convolutional filters
-3. **Three innovations make DQN stable** - Replay, target network, CNN
-4. **Tanh activation works well for bounded inputs** - Better than ReLU for grid games
-5. **DQN scales where tabular fails** - 10×10, 20×20 grids are feasible
-6. **Not perfect** - Still has instability issues, high sample complexity
+### Training Metrics (10×10 Grid)
 
-DQN represents the bridge from classical RL to modern deep RL, showing how neural networks can tackle problems that were previously intractable.
+| Metric | Value | When |
+|--------|-------|------|
+| **Episodes to Convergence** | 5,000-10,000 | When avg score plateaus |
+| **Final Average Score** | 18-25 apples | Last 100 episodes |
+| **Best Score** | 30-40 apples | Peak performance |
+| **Training Time (CPU)** | 30-60 minutes | Typical desktop |
+| **Training Time (GPU)** | 10-20 minutes | With CUDA |
+
+### Learning Curve Characteristics
+
+**Typical training curve:**
+```
+Score
+  |
+40|                                    *  *
+  |                                 *        *
+30|                             *                *
+  |                          *
+20|                      *
+  |                  *
+10|             *
+  |         *
+ 0|  * * *
+  |_________________________________________
+    0     5k    10k   15k   20k  Episodes
+```
+
+**Key Observations:**
+1. Slow start (first 1,000 episodes): Random exploration
+2. Rapid improvement (1,000-5,000): Learning basic strategies
+3. Steady growth (5,000-15,000): Refining policy
+4. Plateau (15,000+): Near-optimal performance
+
+---
+
+## Common Issues and Solutions
+
+### Issue 1: No Learning After 5,000 Episodes
+
+**Symptoms:** Score stays around 1-3, no improvement
+
+**Possible Causes:**
+- Learning rate too high/low
+- Reward signal too weak
+- Network too small/large
+- Exploration decaying too fast
+
+**Solutions:**
+- Check learning rate (try 1e-4 to 1e-5)
+- Verify reward function is working
+- Print Q-values to check if network is learning
+- Slow down ε decay
+
+### Issue 2: Performance Oscillates Wildly
+
+**Symptoms:** Score jumps between 5 and 20 unpredictably
+
+**Possible Causes:**
+- Target network updating too frequently
+- Batch size too small
+- High learning rate
+
+**Solutions:**
+- Increase target update frequency (1,000 → 2,000 steps)
+- Increase batch size (64 → 128)
+- Reduce learning rate
+
+### Issue 3: Training Very Slow
+
+**Symptoms:** 10 minutes per 100 episodes
+
+**Solutions:**
+- Use GPU if available
+- Reduce replay buffer size
+- Simplify network architecture
+- Increase batch size
+
+### Issue 4: Q-Values Explode to NaN
+
+**Symptoms:** Loss becomes NaN, training crashes
+
+**Possible Causes:**
+- Learning rate too high
+- No gradient clipping
+- Reward scale too large
+
+**Solutions:**
+- Reduce learning rate
+- Enable gradient clipping (max_norm=1.0)
+- Normalize rewards
+
+---
+
+## Advantages and Limitations
+
+### Advantages ✅
+
+1. **Handles Large State Spaces:** Works where tabular methods fail (10×10, 20×20 grids)
+2. **Generalizes:** Similar states produce similar Q-values without explicit storage
+3. **Scalable Memory:** Same network size for any grid size
+4. **Sample Efficient:** Learns from similar states through shared weights
+5. **Spatial Understanding:** CNN naturally processes grid structure
+
+### Limitations ❌
+
+1. **Sample Inefficiency vs. Policy Gradient Methods:** Requires more episodes than PPO
+2. **Hyperparameter Sensitive:** Requires careful tuning of learning rate, buffer size, etc.
+3. **Training Time:** Minutes to hours vs. seconds for tabular (on small grids)
+4. **No Convergence Guarantee:** Unlike tabular Q-Learning, can diverge
+5. **Less Interpretable:** Cannot inspect exact Q-values, network is a black box
+6. **Instability Risk:** Can suffer from catastrophic forgetting or divergence
