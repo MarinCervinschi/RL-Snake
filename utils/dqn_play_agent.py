@@ -9,7 +9,7 @@ from game.entities import Action, State
 class ConvQNetwork(nn.Module):
     """CNN Q-Network for DQN."""
 
-    def __init__(self, grid_size: int, num_actions: int = 4):
+    def __init__(self, grid_size: int, num_actions: int = 3):
         super().__init__()
 
         self.conv = nn.Sequential(

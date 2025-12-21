@@ -48,9 +48,7 @@ class SnakeGameEngine:
     def step(self, action: Action) -> Tuple[float, bool, int]:
         self.frame_iteration += 1
 
-        effective_action = self._get_effective_action(action)
-        self.direction = Direction.from_action(effective_action)
-
+        self._apply_relative_action(action)
         self._move_snake()
 
         if self._is_collision():
@@ -117,11 +115,20 @@ class SnakeGameEngine:
                 self.food = food
                 break
 
-    def _get_effective_action(self, action: Action) -> Action:
-        requested_direction = Direction.from_action(action)
-        if requested_direction == self.direction.opposite():
-            return Action(self.direction.value)
-        return action
+    def _apply_relative_action(self, action: Action) -> None:
+        """
+        Update self.direction based on a relative action.
+        """
+        if action == Action.FORWARD:
+            return
+
+        elif action == Action.TURN_LEFT:
+            # Rotate -90°
+            self.direction = Direction((self.direction.value - 1) % 4)
+
+        elif action == Action.TURN_RIGHT:
+            # Rotate +90°
+            self.direction = Direction((self.direction.value + 1) % 4)
 
     def _move_snake(self) -> None:
         head = self.snake[0]

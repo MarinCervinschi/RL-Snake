@@ -9,12 +9,11 @@ import numpy as np
 
 
 class Action(Enum):
-    """Absolute directional actions."""
+    """Relative directional actions."""
 
-    UP = 0  # Move in -y direction (decrease row index)
-    RIGHT = 1  # Move in +x direction (increase column index)
-    DOWN = 2  # Move in +y direction (increase row index)
-    LEFT = 3  # Move in -x direction (decrease column index)
+    FORWARD = 0
+    TURN_LEFT = 1
+    TURN_RIGHT = 2
 
 
 class Direction(Enum):
