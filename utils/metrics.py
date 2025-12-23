@@ -11,7 +11,7 @@ class TrainingMetrics:
     Tracks and visualizes training metrics.
     """
 
-    def __init__(self, save_dir: str = "plots"):
+    def __init__(self, save_dir: str = "plots", window_size: int = 100):
         """
         Initialize metrics tracker.
 
@@ -19,6 +19,7 @@ class TrainingMetrics:
             save_dir: Directory to save metrics and plots
         """
         self.save_dir = Path(save_dir)
+        self.window_size = window_size
 
         # Episode data
         self.episodes: List[int] = []
@@ -70,11 +71,11 @@ class TrainingMetrics:
         if epsilon is not None:
             self.epsilons.append(epsilon)
 
-    def get_recent_average_score(self, window: int = 100) -> float:
+    def get_recent_average_score(self) -> float:
         """Get average score over recent episodes."""
         if not self.scores:
             return 0.0
-        recent = self.scores[-window:]
+        recent = self.scores[-self.window_size :]
         return float(np.mean(recent))
 
     # -------------------------------------------------------------------------
@@ -127,8 +128,8 @@ class TrainingMetrics:
         ax.plot(self.episodes, self.scores, alpha=0.3, color="blue", label="Raw Score")
 
         # Trend line
-        if len(self.scores) > 50:
-            window = min(50, len(self.scores) // 10)
+        if len(self.scores) > self.window_size:
+            window = min(self.window_size, len(self.scores) // 10)
             ma = self._moving_average(self.scores, window)
             ax.plot(
                 self.episodes,
@@ -186,8 +187,8 @@ class TrainingMetrics:
         ax.plot(self.episodes, self.steps, alpha=0.4, color="green", label="Steps")
 
         # Trend line for steps
-        if len(self.steps) > 50:
-            window = min(50, len(self.steps) // 10)
+        if len(self.steps) > self.window_size:
+            window = min(self.window_size, len(self.steps) // 10)
             ma = self._moving_average(self.steps, window)
             ax.plot(
                 self.episodes,
@@ -224,8 +225,8 @@ class TrainingMetrics:
             label="Reward",
         )
 
-        if len(self.rewards) > 50:
-            window = min(50, len(self.rewards) // 10)
+        if len(self.rewards) > self.window_size:
+            window = min(self.window_size, len(self.rewards) // 10)
             ma = self._moving_average(self.rewards, window)
             ax.plot(
                 self.episodes[: len(self.rewards)],
@@ -282,7 +283,7 @@ class TrainingMetrics:
         print(f"Best Score:         {max(self.scores)}")
 
         if not play and self.scores:
-            print(f"Recent Avg Score:   {self.get_recent_average_score(100):.2f}")
+            print(f"Recent Avg Score:   {self.get_recent_average_score():.2f}")
 
         if self.steps:
             print(f"Avg Steps/Episode:  {np.mean(self.steps):.1f}")
