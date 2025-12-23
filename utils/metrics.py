@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+from IPython.display import clear_output, display
 
 
 class TrainingMetrics:
@@ -90,7 +91,7 @@ class TrainingMetrics:
 
     def _setup_plot(self, title: str):
         """Helper to create a standard figure."""
-        fig, ax = plt.subplots(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=(6, 5))
         fig.suptitle(title, fontsize=14, fontweight="bold")
         return fig, ax
 
@@ -115,7 +116,7 @@ class TrainingMetrics:
     # -------------------------------------------------------------------------
 
     def plot_learning_curve(
-        self, show: bool = True, save: bool = True, ax=None
+        self, show: bool = True, save: bool = False, ax=None
     ) -> None:
         """Plot scores over episodes."""
         if not self.episodes:
@@ -151,7 +152,9 @@ class TrainingMetrics:
         if is_standalone:
             self._finalize_plot("learning_curve.png", show, save)
 
-    def plot_epsilon_decay(self, show: bool = True, save: bool = True, ax=None) -> None:
+    def plot_epsilon_decay(
+        self, show: bool = True, save: bool = False, ax=None
+    ) -> None:
         """Plot epsilon values over episodes."""
         if not self.epsilons:
             return
@@ -177,7 +180,9 @@ class TrainingMetrics:
         if is_standalone:
             self._finalize_plot("epsilon_decay.png", show, save)
 
-    def plot_survival_time(self, show: bool = True, save: bool = True, ax=None) -> None:
+    def plot_survival_time(
+        self, show: bool = True, save: bool = False, ax=None
+    ) -> None:
         """Plot number of steps per episode."""
         if not self.steps:
             return
@@ -210,7 +215,7 @@ class TrainingMetrics:
         if is_standalone:
             self._finalize_plot("survival_time.png", show, save)
 
-    def plot_rewards(self, show: bool = True, save: bool = True, ax=None) -> None:
+    def plot_rewards(self, show: bool = True, save: bool = False, ax=None) -> None:
         """Plot total reward per episode."""
         if not self.rewards:
             return
@@ -248,60 +253,31 @@ class TrainingMetrics:
         if is_standalone:
             self._finalize_plot("rewards.png", show, save)
 
+    def plot_live(self):
+        """
+        Live plot of learning curve and survival time (steps) side by side in a notebook.
+        """
+        if not self.episodes:
+            return
+        plt.figure(figsize=(12, 5))
+        # Learning Curve
+        ax1 = plt.subplot(1, 2, 1)
+        self.plot_learning_curve(show=False, save=False, ax=ax1)
+        ax1.set_title("Learning Curve (Scores)")
+
+        # Survival Time
+        ax2 = plt.subplot(1, 2, 2)
+        self.plot_survival_time(show=False, save=False, ax=ax2)
+        ax2.set_title("Survival Time (Steps)")
+
+        plt.tight_layout()
+        clear_output(wait=True)
+        display(plt.gcf())
+        plt.close()
+
     # -------------------------------------------------------------------------
     # Main Dashboard
     # -------------------------------------------------------------------------
-
-    def plot(self, show: bool = True, save: bool = True) -> None:
-        """
-        Generate a 2x2 grid containing all 4 plots.
-        """
-        if not self.episodes:
-            print("⚠️  No data to plot")
-            return
-
-        print("📈 Generating training dashboard...")
-
-        # Create 2x2 Grid
-        fig, axs = plt.subplots(2, 2, figsize=(15, 10))
-        fig.suptitle("Training Metrics Dashboard", fontsize=16, fontweight="bold")
-
-        # Call individual methods, passing the specific axis
-        # Top Left: Learning Curve
-        self.plot_learning_curve(show=False, save=False, ax=axs[0, 0])
-        axs[0, 0].set_title("Learning Curve (Scores)")
-
-        # Top Right: Epsilon
-        if self.epsilons:
-            self.plot_epsilon_decay(show=False, save=False, ax=axs[0, 1])
-            axs[0, 1].set_title("Epsilon Decay")
-        else:
-            axs[0, 1].text(0.5, 0.5, "No Epsilon Data", ha="center")
-
-        # Bottom Left: Survival Time
-        self.plot_survival_time(show=False, save=False, ax=axs[1, 0])
-        axs[1, 0].set_title("Survival Time (Steps)")
-
-        # Bottom Right: Rewards
-        if self.rewards:
-            self.plot_rewards(show=False, save=False, ax=axs[1, 1])
-            axs[1, 1].set_title("Accumulated Rewards")
-        else:
-            axs[1, 1].text(0.5, 0.5, "No Reward Data", ha="center")
-
-        plt.tight_layout(rect=(0, 0, 1, 0.96))  # Adjust for suptitle
-
-        if save:
-            self.save_dir.mkdir(parents=True, exist_ok=True)
-            plot_path = self.save_dir / "training_dashboard.png"
-            plt.savefig(plot_path, dpi=150, bbox_inches="tight")
-            print(f"📊 Dashboard saved to: {plot_path}")
-
-        if show:
-            plt.show(block=False)
-            plt.pause(0.1)
-        else:
-            plt.close()
 
     def print_summary(self, play: bool = False) -> None:
         """Print summary statistics."""
