@@ -95,7 +95,7 @@ class TrainingMetrics:
         fig.suptitle(title, fontsize=14, fontweight="bold")
         return fig, ax
 
-    def _finalize_plot(self, path_name: str, show: bool, save: bool):
+    def _finalize_plot(self, path_name: str, save: bool):
         """Helper to save and show plots."""
         plt.tight_layout()
 
@@ -105,19 +105,13 @@ class TrainingMetrics:
             plt.savefig(plot_path, dpi=150, bbox_inches="tight")
             print(f"📊 Plot saved to: {plot_path}")
 
-        if show:
-            plt.show(block=False)
-            plt.pause(0.1)
-        else:
-            plt.close()
+        plt.show()
 
     # -------------------------------------------------------------------------
     # Individual Plots
     # -------------------------------------------------------------------------
 
-    def plot_learning_curve(
-        self, show: bool = True, save: bool = False, ax=None
-    ) -> None:
+    def plot_learning_curve(self, save: bool = False, ax=None) -> None:
         """Plot scores over episodes."""
         if not self.episodes:
             return
@@ -150,11 +144,9 @@ class TrainingMetrics:
         ax.legend()
 
         if is_standalone:
-            self._finalize_plot("learning_curve.png", show, save)
+            self._finalize_plot("learning_curve.png", save)
 
-    def plot_epsilon_decay(
-        self, show: bool = True, save: bool = False, ax=None
-    ) -> None:
+    def plot_epsilon_decay(self, save: bool = False, ax=None) -> None:
         """Plot epsilon values over episodes."""
         if not self.epsilons:
             return
@@ -178,11 +170,9 @@ class TrainingMetrics:
         ax.legend()
 
         if is_standalone:
-            self._finalize_plot("epsilon_decay.png", show, save)
+            self._finalize_plot("epsilon_decay.png", save)
 
-    def plot_survival_time(
-        self, show: bool = True, save: bool = False, ax=None
-    ) -> None:
+    def plot_survival_time(self, save: bool = False, ax=None) -> None:
         """Plot number of steps per episode."""
         if not self.steps:
             return
@@ -213,9 +203,9 @@ class TrainingMetrics:
         ax.legend()
 
         if is_standalone:
-            self._finalize_plot("survival_time.png", show, save)
+            self._finalize_plot("survival_time.png", save)
 
-    def plot_rewards(self, show: bool = True, save: bool = False, ax=None) -> None:
+    def plot_rewards(self, save: bool = False, ax=None) -> None:
         """Plot total reward per episode."""
         if not self.rewards:
             return
@@ -251,7 +241,7 @@ class TrainingMetrics:
         ax.legend()
 
         if is_standalone:
-            self._finalize_plot("rewards.png", show, save)
+            self._finalize_plot("rewards.png", save)
 
     def plot_live(self):
         """
@@ -262,12 +252,12 @@ class TrainingMetrics:
         plt.figure(figsize=(12, 5))
         # Learning Curve
         ax1 = plt.subplot(1, 2, 1)
-        self.plot_learning_curve(show=False, save=False, ax=ax1)
+        self.plot_learning_curve(save=False, ax=ax1)
         ax1.set_title("Learning Curve (Scores)")
 
         # Survival Time
         ax2 = plt.subplot(1, 2, 2)
-        self.plot_survival_time(show=False, save=False, ax=ax2)
+        self.plot_survival_time(save=False, ax=ax2)
         ax2.set_title("Survival Time (Steps)")
 
         plt.tight_layout()
