@@ -282,7 +282,7 @@ class TrainingMetrics:
         print(f"Total Episodes:     {len(self.episodes)}")
         print(f"Best Score:         {max(self.scores)}")
 
-        if not play and self.scores:
+        if self.scores:
             print(f"Recent Avg Score:   {self.get_recent_average_score():.2f}")
 
         if self.steps:
