@@ -10,10 +10,10 @@ class GameConfig:
 
     reward_food: float = 10.0
     reward_collision: float = -10.0
-    reward_step: float = 0.0
+    reward_step: float = 1.0
 
     reward_win: float = 1000.0
-    reward_timeout: float = -5.0
+    reward_timeout: float = -1.0
 
     # Level 1: "Human Competence" (~30% of map)
     milestone_expert_ratio: float = 0.3
