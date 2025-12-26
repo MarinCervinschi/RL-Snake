@@ -29,16 +29,6 @@ class Direction(Enum):
         """Convert Action to Direction (they map 1:1 in absolute system)."""
         return Direction(action.value)
 
-    def opposite(self) -> Direction:
-        """Get the opposite direction (for invalid action detection)."""
-        opposites = {
-            Direction.UP: Direction.DOWN,
-            Direction.DOWN: Direction.UP,
-            Direction.LEFT: Direction.RIGHT,
-            Direction.RIGHT: Direction.LEFT,
-        }
-        return opposites[self]
-
     def to_vector(self) -> Tuple[int, int]:
         """Convert direction to (dx, dy) movement vector."""
         vectors = {
