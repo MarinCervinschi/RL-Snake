@@ -68,25 +68,13 @@ class SnakeGameEngine:
 
             self.frame_iteration = 0
 
-            if len(self.snake) == self.grid_size * self.grid_size:
+            if len(self.snake) == self.config.max_capacity:
                 self.won = True
                 self.game_over = True
                 return self.config.reward_win, self.game_over, self.score
 
             # CHECK MILESTONE REWARDS (Reward Shaping)
-            length = len(self.snake)
-            if length == self.config.get_milestone_length(
-                self.config.milestone_expert_ratio
-            ):
-                reward += self.config.reward_milestone_expert
-            elif length == self.config.get_milestone_length(
-                self.config.milestone_master_ratio
-            ):
-                reward += self.config.reward_milestone_master
-            elif length == self.config.get_milestone_length(
-                self.config.milestone_grandmaster_ratio
-            ):
-                reward += self.config.reward_milestone_grandmaster
+            reward += self.config.get_milestone_reward(snake_length=len(self.snake))
             self._place_food()
 
         else:
