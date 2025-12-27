@@ -10,7 +10,7 @@ class GameConfig:
 
     reward_food: float = 10.0
     reward_collision: float = -10.0
-    reward_step: float = -0.01
+    reward_step: float = 0.0
 
     reward_win: float = 1000.0
     reward_timeout: float = -5.0
