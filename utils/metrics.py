@@ -284,6 +284,8 @@ class TrainingMetrics:
 
         if self.scores:
             print(f"Recent Avg Score:   {self.get_recent_average_score():.2f}")
+            if play:
+                print(f"Worst Score:        {min(self.scores)}")
 
         if self.steps:
             print(f"Avg Steps/Episode:  {np.mean(self.steps):.1f}")
