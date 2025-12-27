@@ -16,7 +16,7 @@ class GameConfig:
     reward_timeout: float = -5.0
 
     # Milestone lengths and rewards
-    milestones = {snake: snake // 2 for snake in range(10, 101, 10)}
+    milestones = {snake: snake * 2 for snake in range(10, 101, 10)}
 
     # Timeout = multiplier * current_snake_length
     max_steps_multiplier: int = 100
